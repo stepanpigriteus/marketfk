@@ -2,21 +2,25 @@ package out
 
 import (
 	"context"
-	"marketfuck/internal/domain/model"
 	"time"
+
+	"marketfuck/internal/domain/model"
 )
 
-type Storage interface {
-	SaveAggregatedData(ctx context.Context, data AggregatedData) error
-	GetPriceHistory(ctx context.Context, pairName, exchangeID string, period time.Duration) ([]AggregatedData, error)
-	Health(ctx context.Context) error
+type PriceRepository interface {
+	SavePrice(ctx context.Context, price model.Price) error
+	GetLatestPrice(ctx context.Context, pairName string) (model.Price, error)
+	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error)
+	GetPricesInPeriod(ctx context.Context, pairName string, startTime, endTime time.Time) ([]model.Price, error)
+	GetPricesInPeriodByExchange(ctx context.Context, exchangeID, pairName string, startTime, endTime time.Time) ([]model.Price, error)
 }
 
-type AggregatedData struct {
-	PairName     string         `json:"pair_name"`
-	Exchange     model.Exchange `json:"exchange"`
-	Timestamp    time.Time      `json:"timestamp"`
-	AveragePrice float64        `json:"average_price"`
-	MinPrice     float64        `json:"min_price"`
-	MaxPrice     float64        `json:"max_price"`
+type ModeRepository interface {
+	SetMode(ctx context.Context, mode string) error
+	GetMode(ctx context.Context) (string, error)
+}
+
+
+type HealthRepository interface {
+	CheckConnection(ctx context.Context) (bool, error)
 }

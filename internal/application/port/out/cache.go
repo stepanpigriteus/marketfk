@@ -2,15 +2,21 @@ package out
 
 import (
 	"context"
-	"marketfuck/internal/domain/model"
 	"time"
+
+	"marketfuck/internal/domain/model"
 )
 
-type Cache interface {
-	SavePrice(ctx context.Context, price model.Price) error
-	GetLatestPrice(ctx context.Context, pairName string) (model.Price, error)
-	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error)
-	GetPricesForPeriod(ctx context.Context, pairName, exchangeID string, period time.Duration) ([]model.Price, error)
-	ClearOldPrices(ctx context.Context, pairName, exchangeID string, before time.Time) error
-	Health(ctx context.Context) error
+
+type CacheClient interface {
+	// сохраняет цену в кеш
+	SetPrice(ctx context.Context, key string, price model.Price, expiration time.Duration) error
+	// получает цену из кеша
+	GetPrice(ctx context.Context, key string) (model.Price, bool, error)
+	// сохраняет режим в кеш
+	SetMode(ctx context.Context, mode string) error
+	// получает режим из кеша
+	GetMode(ctx context.Context) (string, bool, error)
+	// проверяет соединение с кешем
+	CheckConnection(ctx context.Context) (bool, error)
 }
