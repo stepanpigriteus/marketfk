@@ -27,6 +27,11 @@ services:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - marketfuck-net
+    ports:
+      - "5432:5432"
+
+
+
 
   redis:
     image: redis:6-alpine
