@@ -2,9 +2,8 @@ package logger
 
 import (
 	"log/slog"
-	"os"
-
 	"marketfuck/internal/application/port"
+	"os"
 )
 
 type SlogAdapter struct {
@@ -18,17 +17,17 @@ func NewSlogAdapter() port.Logger {
 }
 
 func (l *SlogAdapter) Info(msg string, args ...interface{}) {
-	l.logger.Info(msg, args...)
+	l.logger.Info(msg, args)
 }
 
 func (l *SlogAdapter) Error(msg string, args ...interface{}) {
-	l.logger.Error(msg, args...)
+	l.logger.Error(msg, args)
 }
 
 func (l *SlogAdapter) Warn(msg string, args ...interface{}) {
-	l.logger.Warn(msg, args...)
+	l.logger.Warn(msg, args)
 }
 
 func (l *SlogAdapter) Debug(msg string, args ...interface{}) {
-	l.logger.Debug(msg, args...)
+	l.logger.Debug(msg, args)
 }

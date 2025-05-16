@@ -16,10 +16,9 @@ func NewModeHandler(modeService in.ModeService) *ModeHandler {
 	}
 }
 
-// обрабатывает запрос на переключение в тестовый режим
+
 func (h *ModeHandler) HandleSwitchToTestMode(w http.ResponseWriter, r *http.Request) {
 }
 
-// обрабатывает запрос на переключение в рабочий режим
 func (h *ModeHandler) HandleSwitchToLiveMode(w http.ResponseWriter, r *http.Request) {
 }

@@ -2,6 +2,8 @@ package router
 
 import (
 	"fmt"
+	"marketfuck/internal/adapter/in/http/handler"
+	"marketfuck/internal/adapter/in/http/middleware"
 	"net/http"
 )
 
@@ -12,14 +14,16 @@ type Route struct {
 	Middlewares []func(http.Handler) http.Handler
 }
 
-// func RegisterRoutes(mux *http.ServeMux, handlers *handler.AllHandlers) {
-// 	routes := []Route{}
+func RegisterRoutes(mux *http.ServeMux, handlers *handler.AllHandlers) {
+	routes := []Route{
+		{Method: http.MethodGet, Path: "/prices/latest/", Handler: handlers.Price.HandleGetLatestPrice, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
+	}
 
-// 	for _, route := range routes {
-// 		finalHandler := applyMiddleware(route.Handler, route.Middlewares)
-// 		mux.Handle(route.Path, methodHandler(route.Method, finalHandler))
-// 	}
-// }
+	for _, route := range routes {
+		finalHandler := applyMiddleware(route.Handler, route.Middlewares)
+		mux.Handle(route.Path, methodHandler(route.Method, finalHandler))
+	}
+}
 
 func applyMiddleware(h http.Handler, middlewares []func(http.Handler) http.Handler) http.Handler {
 	for _, m := range middlewares {

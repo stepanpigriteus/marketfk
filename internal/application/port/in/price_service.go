@@ -2,9 +2,8 @@ package in
 
 import (
 	"context"
-	"time"
-
 	"marketfuck/internal/domain/model"
+	"time"
 )
 
 type PriceService interface {
