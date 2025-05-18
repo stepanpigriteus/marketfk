@@ -7,7 +7,6 @@ import (
 	"marketfuck/internal/domain/model"
 )
 
-
 type CacheClient interface {
 	// сохраняет цену в кеш
 	SetPrice(ctx context.Context, key string, price model.Price, expiration time.Duration) error
@@ -19,4 +18,6 @@ type CacheClient interface {
 	GetMode(ctx context.Context) (string, bool, error)
 	// проверяет соединение с кешем
 	CheckConnection(ctx context.Context) (bool, error)
+
+	Close() error
 }
