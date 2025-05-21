@@ -49,8 +49,9 @@ func main() {
 	server := http.NewServer("8081", db, logger)
 	logger.Info("[4/4] Time to run server!")
 
-	// тестовый tсp клиент
-	ports := []int{40101, 40102, 40103}
+	go server.RunServer() // запускаем сервер в отдельной горутине
+
+	ports := []string{"40101", "40102", "40103"}
 	var wg sync.WaitGroup
 
 	for _, port := range ports {
@@ -59,6 +60,4 @@ func main() {
 	}
 
 	wg.Wait()
-	
-	server.RunServer()
 }

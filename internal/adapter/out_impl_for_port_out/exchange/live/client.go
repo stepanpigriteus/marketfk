@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"log"
 	"marketfuck/internal/domain/model"
 	"net"
 	"sync"
@@ -64,19 +65,47 @@ func (e *LiveExchangeClient) CheckConnection(ctx context.Context) (bool, error) 
 
 func (e *LiveExchangeClient) StartReading(output chan<- model.Price) {
 	go func() {
-		defer e.conn.Close()
+		defer func() {
+			e.conn.Close()
+			close(output)
+		}()
 
 		scanner := bufio.NewScanner(e.conn)
 		for scanner.Scan() {
+			line := scanner.Bytes()
+
 			var price model.Price
-			err := json.Unmarshal(scanner.Bytes(), &price)
+			err := json.Unmarshal(line, &price)
 			if err != nil {
-				continue // пропускаем ошибку
+				log.Printf("JSON unmarshal error: %v", err)
+				continue
 			}
-
 			price.Exchange = e.exchange.Name
-
 			output <- price
 		}
+
+		if err := scanner.Err(); err != nil {
+			log.Printf("Scanner error: %v", err)
+		} else {
+			log.Printf("Scanner finished without error")
+		}
 	}()
+}
+
+func (e *LiveExchangeClient) Connect() error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.isConnected {
+		return nil
+	}
+
+	conn, err := net.Dial("tcp", e.address)
+	if err != nil {
+		return err
+	}
+
+	e.conn = conn
+	e.isConnected = true
+	return nil
 }

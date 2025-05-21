@@ -1,17 +1,12 @@
 package model
 
-import "time"
-
-
 type Price struct {
-	PairName  string  
-	Exchange  string   
-	Price     float64   
-	Timestamp time.Time
+	PairName  string
+	Exchange  string
+	Price     float64
+	Timestamp int64 `json:"timestamp"`
 }
-
 
 type Pair struct {
-	Name string 
+	Name string
 }
-
