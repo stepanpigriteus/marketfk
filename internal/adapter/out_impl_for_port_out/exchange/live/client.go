@@ -1,7 +1,9 @@
 package live
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"marketfuck/internal/domain/model"
 	"net"
 	"sync"
@@ -14,23 +16,18 @@ type LiveExchangeClient struct {
 	isConnected bool
 	mu          sync.RWMutex
 
-	// Подписки на обновления цен
 	subscriptions map[string][]chan<- model.Price
 	subsMu        sync.RWMutex
 
-	// Последние полученные цены для каждой пары
 	latestPrices map[string]model.Price
 	pricesMu     sync.RWMutex
 
-	// Контекст и канал для остановки
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	// Канал для переподключения
 	reconnectCh chan struct{}
 }
 
-// NewLiveExchangeClient создает новый клиент для подключения к бирже
 func NewLiveExchangeClient(exchange model.Exchange, address string) *LiveExchangeClient {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -63,4 +60,23 @@ func (e *LiveExchangeClient) UnsubscribePriceUpdates(ctx context.Context, pairNa
 
 func (e *LiveExchangeClient) CheckConnection(ctx context.Context) (bool, error) {
 	return false, nil
+}
+
+func (e *LiveExchangeClient) StartReading(output chan<- model.Price) {
+	go func() {
+		defer e.conn.Close()
+
+		scanner := bufio.NewScanner(e.conn)
+		for scanner.Scan() {
+			var price model.Price
+			err := json.Unmarshal(scanner.Bytes(), &price)
+			if err != nil {
+				continue // пропускаем ошибку
+			}
+
+			price.Exchange = e.exchange.Name
+
+			output <- price
+		}
+	}()
 }
