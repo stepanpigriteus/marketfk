@@ -83,7 +83,14 @@ marketflow/
 ├── test/                # Тесты
 │   ├── integration/     # Интеграционные тесты
 │   └── e2e/             # End-to-End тесты
-│
+├── setup_structure.sh
+├── sources             # Исходники бирж
+│   ├── exchange1
+│   │   └── exchange1_amd64.tar
+│   ├── exchange2
+│   │   └── exchange2_amd64.tar
+│   └── exchange3
+│       └── exchange3_amd64.tar
 ├── .gitignore           # Файлы, игнорируемые Git
 ├── Makefile             # Makefile для автоматизации задач
 ├── README.md            # Описание проекта

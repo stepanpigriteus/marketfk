@@ -1,6 +1,84 @@
-version: '3.8'
+version: '3.9' 
+
+x-no-pull: &no-pull
+  pull_policy: "never"
 
 services:
+
+  loader:
+    image: docker:20.10.24-cli
+    container_name: image_loader
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../sources:/sources
+    entrypoint: |
+      sh -c "
+        docker load -i /sources/exchange1/exchange1_amd64.tar &&
+        docker load -i /sources/exchange2/exchange2_amd64.tar &&
+        docker load -i /sources/exchange3/exchange3_amd64.tar
+      "
+    networks:
+      - marketfuck-net
+
+
+  exchange1:
+    image: exchange1:latest
+    container_name: exchange1
+    <<: *no-pull
+    depends_on:
+      loader:
+        condition: service_completed_successfully
+    ports:
+      - "40101:40101"
+    networks:
+      - marketfuck-net
+
+  exchange2:
+    image: exchange2:latest
+    container_name: exchange2
+    <<: *no-pull
+    depends_on:
+      loader:
+        condition: service_completed_successfully
+    ports:
+      - "40102:40102"
+    networks:
+      - marketfuck-net
+
+  exchange3:
+    image: exchange3:latest
+    container_name: exchange3
+    <<: *no-pull
+    depends_on:
+      loader:
+        condition: service_completed_successfully
+    ports:
+      - "40103:40103"
+    networks:
+      - marketfuck-net
+
+  postgres:
+    image: postgres:13-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketfuck
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - marketfuck-net
+
+  redis:
+    image: redis:6-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - marketfuck-net
+
   marketflow:
     build:
       context: ..
@@ -16,69 +94,6 @@ services:
       - exchange3
     env_file:
       - ../.env
-    networks:
-      - marketfuck-net
-
-  postgres:
-    image: postgres:13-alpine
-    container_name: postgres
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: marketfuck
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - marketfuck-net
-    ports:
-      - "5432:5432"
-
-  redis:
-    image: redis:6-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - marketfuck-net
-
-  exchange1:
-    image: exchange1:latest
-    container_name: exchange1
-    ports:
-      - "40101:40101"
-    networks:
-      - marketfuck-net
-
-  exchange2:
-    image: exchange2:latest
-    container_name: exchange2
-    ports:
-      - "40102:40102"
-    networks:
-      - marketfuck-net
-
-  exchange3:
-    image: exchange3:latest
-    container_name: exchange3
-    ports:
-      - "40103:40103"
-    networks:
-      - marketfuck-net
-
-  loader:
-    image: docker:20.10.24-dind
-    container_name: image_loader
-    privileged: true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ../sources:/sources
-    entrypoint: >
-      sh -c "
-        docker load -i /sources/exchange1/exchange1_amd64.tar &&
-        docker load -i /sources/exchange2/exchange2_amd64.tar &&
-        docker load -i /sources/exchange3/exchange3_amd64.tar &&
-        tail -f /dev/null
-      "
     networks:
       - marketfuck-net
 

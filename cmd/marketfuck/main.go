@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
-
+	"marketfuck/internal/adapter/in/exchange/live"
 	"marketfuck/internal/adapter/in/http"
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
 	"marketfuck/pkg/config"
 	"marketfuck/pkg/logger"
+	"sync"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -47,5 +48,14 @@ func main() {
 
 	server := http.NewServer("8081", db, logger)
 	logger.Info("[4/4] Time to run server!")
+	ports := []int{40101, 40102, 40103}
+	var wg sync.WaitGroup
+
+	for _, port := range ports {
+		wg.Add(1)
+		go live.ConnectAndRead(port, &wg)
+	}
+
+	wg.Wait()
 	server.RunServer()
 }

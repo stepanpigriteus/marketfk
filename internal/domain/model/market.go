@@ -14,3 +14,4 @@ type Price struct {
 type Pair struct {
 	Name string 
 }
+
