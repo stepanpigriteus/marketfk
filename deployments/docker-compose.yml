@@ -13,9 +13,12 @@ services:
       - ../sources:/sources
     entrypoint: |
       sh -c "
-        docker load -i /sources/exchange1/exchange1_amd64.tar &&
-        docker load -i /sources/exchange2/exchange2_amd64.tar &&
-        docker load -i /sources/exchange3/exchange3_amd64.tar
+        docker load -i /sources/exchange1/exchange1_amd64.tar && \
+        docker tag exchange1:latest exchange1:latest && \
+        docker load -i /sources/exchange2/exchange2_amd64.tar && \
+        docker tag exchange2:latest exchange2:latest && \
+        docker load -i /sources/exchange3/exchange3_amd64.tar && \
+        docker tag exchange3:latest exchange3:latest
       "
     networks:
       - marketfuck-net
