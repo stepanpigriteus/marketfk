@@ -1,7 +1,7 @@
 package model
 
 type Price struct {
-	PairName  string
+	PairName  string `json:"symbol"`
 	Exchange  string
 	Price     float64
 	Timestamp int64 `json:"timestamp"`

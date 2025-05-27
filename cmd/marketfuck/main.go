@@ -7,17 +7,20 @@ import (
 	"marketfuck/internal/adapter/in/http"
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
+	"marketfuck/internal/domain/model"
+	"marketfuck/pkg/concurrency"
 	"marketfuck/pkg/config"
 	"marketfuck/pkg/logger"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
 func main() {
+	var counter atomic.Uint64
 	logger := logger.NewSlogAdapter()
-
 	logger.Info("[1/4] Reading configurations")
 	cfg := config.LoadConfig()
 
@@ -30,6 +33,7 @@ func main() {
 		cfg.DB.Name,
 		cfg.DB.SSLMode,
 	)
+
 	logger.Info("[2/4] An attempt to connect to the DB")
 	time.Sleep(4 * time.Second)
 	db, err := postgres.ConnectDB(connStr)
@@ -48,16 +52,52 @@ func main() {
 
 	server := http.NewServer("8081", db, logger)
 	logger.Info("[4/4] Time to run server!")
+	go server.RunServer()
 
-	go server.RunServer() // запускаем сервер в отдельной горутине
-
+	/// переписать под мапу
 	ports := []string{"40101", "40102", "40103"}
 	var wg sync.WaitGroup
+	priceCh1 := make(chan model.Price, 100)
+	priceCh2 := make(chan model.Price, 100)
+	priceCh3 := make(chan model.Price, 100)
+	// outCh1 := make(chan model.Price, 100)
+	// outCh2 := make(chan model.Price, 100)
+	// outCh3 := make(chan model.Price, 100)
+	// outChannels := [3]chan model.Price{outCh1, outCh2, outCh3}
+	priceChannels := [3]chan model.Price{priceCh1, priceCh2, priceCh3}
+	workerCount := 50
 
-	for _, port := range ports {
-		wg.Add(1)
-		go live.ConnectAndRead(port, &wg)
+	// Каналы для каждого воркера
+	workerChans := make([]chan model.Price, workerCount)
+	for i := 0; i < workerCount; i++ {
+		workerChans[i] = make(chan model.Price, 100)
 	}
 
+	// Запуск воркеров
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		worker := concurrency.NewWorker(i, workerChans[i], &wg, &counter, outChannels[i])
+		go worker.Run()
+	}
+
+	// Запуск Fan-Out для распределения данных по воркерам
+	for _, chann := range priceChannels {
+		go concurrency.FanOut(chann, workerChans)
+	}
+
+	// Подключение к биржам и получение данных
+	for i, port := range ports {
+		wg.Add(1)
+		go live.GenConnectAndRead(port, &wg, priceChannels[i])
+	}
+
+	// Ожидаем завершения всех горутин получения данных
 	wg.Wait()
+
+	// Закрываем канал цен - это приведет к завершению FanOut
+	close(priceCh1)
+	close(priceCh2)
+	close(priceCh3)
+
+	logger.Info("Все операции завершены")
 }

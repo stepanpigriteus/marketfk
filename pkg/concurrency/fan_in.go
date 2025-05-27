@@ -1,16 +1,20 @@
 package concurrency
 
+// гопота
+
 import (
-	"marketfuck/internal/adapter/out_impl_for_port_out/exchange/live"
 	"marketfuck/internal/domain/model"
 )
 
-func FanIn(clients []*live.LiveExchangeClient) <-chan model.Price {
-	out := make(chan model.Price)
-
-	for _, client := range clients {
-		client.StartReading(out)
-	}
-
-	return out
+func FanIn(workerCount int, input chan model.Price, result chan model.Price) {
+	go func() {
+		for i := 0; i < workerCount; i++ {
+			go func() {
+				for price := range input {
+					result <- price
+				}
+			}()
+		}
+		close(result)
+	}()
 }
