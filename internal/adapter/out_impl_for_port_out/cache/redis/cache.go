@@ -13,20 +13,20 @@ type RedisCache struct {
 }
 
 func NewRedisCache(addr, password string, db int) (*RedisCache, error) {
-    rdb := redis.NewClient(&redis.Options{
-        Addr:     addr,
-        Password: password,
-        DB:       db,
-    })
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       db,
+	})
 
-    ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-    defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
-    if err := rdb.Ping(ctx).Err(); err != nil {
-        return nil, fmt.Errorf("ошибка подключения к Redis: %v", err)
-    }
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		return nil, fmt.Errorf("ошибка подключения к Redis: %v", err)
+	}
 
-    return &RedisCache{client: rdb}, nil
+	return &RedisCache{client: rdb}, nil
 }
 
 func (r *RedisCache) Set(ctx context.Context, key string, value string, ttl time.Duration) error {

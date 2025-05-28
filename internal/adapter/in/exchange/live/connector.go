@@ -23,7 +23,7 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 		return
 	}
 
-	priceCh := make(chan model.Price)
+	priceCh := make(chan model.Price, 100)
 	client.StartReading(priceCh)
 
 	for price := range priceCh {

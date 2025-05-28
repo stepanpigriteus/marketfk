@@ -30,21 +30,10 @@ func (w *WorkerStr) Run() {
 
 	for price := range w.In {
 		w.Counter.Add(1)
-		log.Printf("Worker %d обработал цену: %+v, %d", w.Id, price, w.Counter.Load())
 		// Здесь должна быть ебучая логика отправки в канал:
+
+		w.Out <- price
 
 	}
 	log.Printf("Worker %d завершает работу, канал закрыт", w.Id)
 }
-
-// func Worker(id int, workerCh <-chan model.Price, wg *sync.WaitGroup, counter *atomic.Uint64) {
-// 	defer wg.Done()
-
-// 	for price := range workerCh {
-// 		counter.Add(1)
-// 		log.Printf("Worker %d обработал цену: %+v, %d", id, price, counter.Load())
-// 		// Здесь должна быть ебучая логика отправки в канал:
-
-// 	}
-// 	log.Printf("Worker %d завершает работу, канал закрыт", id)
-// }

@@ -60,13 +60,13 @@ func main() {
 	priceCh1 := make(chan model.Price, 100)
 	priceCh2 := make(chan model.Price, 100)
 	priceCh3 := make(chan model.Price, 100)
-	// outCh1 := make(chan model.Price, 100)
-	// outCh2 := make(chan model.Price, 100)
-	// outCh3 := make(chan model.Price, 100)
-	// outChannels := [3]chan model.Price{outCh1, outCh2, outCh3}
-	priceChannels := [3]chan model.Price{priceCh1, priceCh2, priceCh3}
-	workerCount := 50
 
+	priceChannels := [3]chan model.Price{priceCh1, priceCh2, priceCh3}
+	const workerCount int = 50
+	outChannels := [workerCount]chan model.Price{}
+	for i := 0; i < workerCount; i++ {
+		outChannels[i] = make(chan model.Price)
+	}
 	// Каналы для каждого воркера
 	workerChans := make([]chan model.Price, workerCount)
 	for i := 0; i < workerCount; i++ {
@@ -91,7 +91,19 @@ func main() {
 		go live.GenConnectAndRead(port, &wg, priceChannels[i])
 	}
 
-	// Ожидаем завершения всех горутин получения данных
+	fanInChan := make(chan model.Price, workerCount*300)
+
+	concurrency.FanIn(workerCount, fanInChan, outChannels[:], &wg)
+
+	go func() {
+		wg.Wait()
+		close(fanInChan)
+	}()
+
+	for price := range fanInChan {
+		fmt.Println("Получена цена:", price, counter.Load())
+	}
+
 	wg.Wait()
 
 	// Закрываем канал цен - это приведет к завершению FanOut
