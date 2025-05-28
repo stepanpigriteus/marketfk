@@ -1,8 +1,8 @@
 package concurrency
 
-// гопота
 
 import (
+	"log"
 	"marketfuck/internal/domain/model"
 )
 
@@ -11,14 +11,13 @@ func FanOut(input <-chan model.Price, workerChans []chan model.Price) {
 		for _, ch := range workerChans {
 			close(ch)
 		}
-		// log.Println("FanOut: все каналы воркеров закрыты")
+		log.Println("FanOut: все каналы воркеров закрыты")
 	}()
 
 	i := 0
 	for price := range input {
-		// log.Printf("FanOut: распределяем цену: %+v", price)
 		workerChans[i%len(workerChans)] <- price
 		i++
 	}
-	// log.Println("FanOut: все данные распределены")
+	log.Println("FanOut: все данные распределены")
 }

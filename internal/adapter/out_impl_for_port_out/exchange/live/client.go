@@ -63,7 +63,7 @@ func (e *LiveExchangeClient) CheckConnection(ctx context.Context) (bool, error) 
 	return false, nil
 }
 
-func (e *LiveExchangeClient) StartReading(output chan<- model.Price) {
+func (e *LiveExchangeClient) StartReading(ctx context.Context, output chan<- model.Price) {
 	go func() {
 		defer func() {
 			e.conn.Close()
@@ -81,7 +81,13 @@ func (e *LiveExchangeClient) StartReading(output chan<- model.Price) {
 				continue
 			}
 			price.Exchange = e.exchange.Name
-			output <- price
+
+			select {
+			case output <- price:
+
+			case <-ctx.Done():
+				return
+			}
 		}
 
 		if err := scanner.Err(); err != nil {

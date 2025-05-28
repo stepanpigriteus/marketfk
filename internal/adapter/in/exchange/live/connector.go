@@ -1,15 +1,19 @@
 package live
 
 import (
+	"context"
 	"log"
 	"marketfuck/internal/adapter/out_impl_for_port_out/exchange/live"
 	"marketfuck/internal/domain/model"
 	"sync"
+	"time"
 )
 
 func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Price) {
 	defer wg.Done()
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*2))
+	defer cancel()
 	address := "exchange" + port[4:5] + ":" + port
 	exchange := model.Exchange{Name: "Exchange" + port[4:5]}
 
@@ -24,10 +28,13 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 	}
 
 	priceCh := make(chan model.Price, 100)
-	client.StartReading(priceCh)
+
+	client.StartReading(ctx, priceCh)
 
 	for price := range priceCh {
 		output <- price // отправка в общий input
 	}
 	log.Printf("Stopped reading from %s", address)
+
+	// повторное подключение
 }

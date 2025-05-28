@@ -27,11 +27,11 @@ func NewWorker(id int, in <-chan model.Price, wg *sync.WaitGroup, counter *atomi
 
 func (w *WorkerStr) Run() {
 	defer w.wg.Done()
-
+	defer close(w.Out) // grok
 	for price := range w.In {
-		w.Counter.Add(1)
+		// w.Counter.Add(1)
 		// Здесь должна быть ебучая логика отправки в канал:
-
+		log.Printf("Worker %d: обработана цена %+v", w.Id, price)
 		w.Out <- price
 
 	}
