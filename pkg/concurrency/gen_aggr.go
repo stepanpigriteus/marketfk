@@ -2,16 +2,19 @@ package concurrency
 
 import (
 	"fmt"
-	"marketfuck/internal/adapter/in/exchange/live"
-	"marketfuck/internal/domain/model"
+	"log"
 	"sync"
 	"sync/atomic"
+
+	"marketfuck/internal/adapter/in/exchange/live"
+	"marketfuck/internal/domain/model"
 )
 
 func GenAggr(counter *atomic.Uint64) {
 	ports := []string{"40101", "40102", "40103"}
 
 	var wg sync.WaitGroup
+	var exchangeWg sync.WaitGroup // Отдельный WaitGroup для бирж
 	priceCh1 := make(chan model.Price, 500)
 	priceCh2 := make(chan model.Price, 500)
 	priceCh3 := make(chan model.Price, 500)
@@ -33,35 +36,56 @@ func GenAggr(counter *atomic.Uint64) {
 		go worker.Run()
 	}
 
-	// Запуск Fan-Out для распределения данных по воркерам
+	// Запуск FanOut с отслеживанием через WaitGroup
+	var fanOutWg sync.WaitGroup
 	for _, chann := range priceChannels {
-		go FanOut(chann, workerChans)
+		fanOutWg.Add(1)
+		go func(chann chan model.Price) {
+			FanOut(chann, workerChans)
+			fanOutWg.Done()
+		}(chann)
 	}
 
-	// Подключение к биржам и получение данных
+	// Закрытие workerChans после завершения всех FanOut
+	go func() {
+		fanOutWg.Wait()
+		for _, ch := range workerChans {
+			close(ch)
+		}
+		log.Println("Все workerChans закрыты после завершения FanOut")
+	}()
+
+	// Подключение к биржам с отдельным WaitGroup
 	for i, port := range ports {
-		wg.Add(1)
-		go live.GenConnectAndRead(port, &wg, priceChannels[i])
+		exchangeWg.Add(1)
+		go func(i int, port string) {
+			live.GenConnectAndRead(port, &exchangeWg, priceChannels[i])
+		}(i, port)
 	}
+
+	// Закрытие priceCh после завершения чтения с бирж
+	go func() {
+		exchangeWg.Wait()
+		close(priceCh1)
+		close(priceCh2)
+		close(priceCh3)
+		log.Println("Закрыты каналы priceCh после завершения чтения с бирж")
+	}()
 
 	fanInChan := make(chan model.Price, workerCount*300)
 	FanIn(workerCount, fanInChan, outChannels[:], &wg)
 
-	// Ожидаем завершения всех горутин
+	// Закрытие fanInChan после завершения воркеров и FanIn
 	go func() {
 		wg.Wait()
-		close(priceCh1)
-		close(priceCh2)
-		close(priceCh3)
 		close(fanInChan)
 		fmt.Println("Все операции завершены.")
 	}()
 
-	// Ожидаем, пока данные не будут обработаны
+	// Обработка данных
 	for price := range fanInChan {
 		fmt.Println("Получена цена:", price)
 	}
 
-	// Завершаем программу после того, как все данные обработаны и каналы закрыты
 	fmt.Println("Программа завершена.")
 }

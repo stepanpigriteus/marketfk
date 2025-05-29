@@ -1,18 +1,21 @@
 package live
 
 import (
+	"context"
 	"log"
+	"sync"
+	"time"
+
 	"marketfuck/internal/adapter/out_impl_for_port_out/exchange/live"
 	"marketfuck/internal/domain/model"
-	"sync"
 )
 
 func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Price) {
 	defer wg.Done()
 
 	// для теста отключения
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*2))
-	// defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*2))
+	defer cancel()
 
 	address := "exchange" + port[4:5] + ":" + port
 	exchange := model.Exchange{Name: "Exchange" + port[4:5]}
