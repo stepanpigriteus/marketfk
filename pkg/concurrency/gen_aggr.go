@@ -3,18 +3,18 @@ package concurrency
 import (
 	"fmt"
 	"log"
-	"sync"
-	"sync/atomic"
-
 	"marketfuck/internal/adapter/in/exchange/live"
 	"marketfuck/internal/domain/model"
+	"os"
+	"sync"
+	"sync/atomic"
 )
 
 func GenAggr(counter *atomic.Uint64) {
 	ports := []string{"40101", "40102", "40103"}
 
 	var wg sync.WaitGroup
-	var exchangeWg sync.WaitGroup // Отдельный WaitGroup для бирж
+	var exchangeWg sync.WaitGroup
 	priceCh1 := make(chan model.Price, 500)
 	priceCh2 := make(chan model.Price, 500)
 	priceCh3 := make(chan model.Price, 500)
@@ -83,6 +83,13 @@ func GenAggr(counter *atomic.Uint64) {
 	}()
 
 	// Обработка данных
+
+	file, err := os.OpenFile("prices.json", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatalf("Не удалось открыть файл: %v", err)
+	}
+	defer file.Close()
+
 	for price := range fanInChan {
 		fmt.Println("Получена цена:", price)
 	}
