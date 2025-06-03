@@ -18,7 +18,7 @@ type WorkerStr struct {
 func NewWorker(id int, in <-chan model.Price, wg *sync.WaitGroup, counter *atomic.Uint64, out chan model.Price) *WorkerStr {
 	return &WorkerStr{
 		In:      in,
-		Out:     out,
+		Out:     out, 
 		Id:      id,
 		Counter: counter,
 		wg:      wg,

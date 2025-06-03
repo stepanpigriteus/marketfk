@@ -35,7 +35,6 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 
 		priceCh := make(chan model.Price, 100)
 
-		// Можно создать отдельный контекст с таймаутом только для чтения (если нужно)
 		readCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		client.StartReading(readCtx, priceCh)
 

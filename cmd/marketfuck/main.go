@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
-	"sync/atomic"
-	"time"
-
+	"marketfuck/internal/adapter/in/http"
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
 	"marketfuck/pkg/concurrency"
 	"marketfuck/pkg/config"
 	"marketfuck/pkg/logger"
+	"sync/atomic"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -45,13 +45,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Невозможно подключиться к Redis: %v", err)
 	}
+
 	defer redisClient.Close()
 
-	// server := http.NewServer("8081", db, logger)
+	server := http.NewServer("8081", db, logger)
 	logger.Info("[4/4] Time to run server!")
-	// go server.RunServer()
+	go server.RunServer()
 
-	concurrency.GenAggr(&counter)
+	// нужно возвращать данные из агрегации и передавать в функцию управления редисом и базой
+	concurrency.GenAggr(&counter, *redisClient)
 
 	// Закрываем канал цен - это приведет к завершению FanOut
 
