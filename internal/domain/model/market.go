@@ -5,6 +5,7 @@ type Price struct {
 	Exchange  string
 	Price     float64
 	Timestamp int64 `json:"timestamp"`
+	TSR       int64 `json:"timestamp"`
 }
 
 type Pair struct {

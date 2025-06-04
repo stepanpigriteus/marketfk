@@ -6,6 +6,7 @@ import (
 	"marketfuck/internal/adapter/in/http"
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
+	usecase "marketfuck/internal/application/usecase_impl_for_port_in"
 	"marketfuck/pkg/concurrency"
 	"marketfuck/pkg/config"
 	"marketfuck/pkg/logger"
@@ -53,8 +54,20 @@ func main() {
 	go server.RunServer()
 
 	// нужно возвращать данные из агрегации и передавать в функцию управления редисом и базой
-	concurrency.GenAggr(&counter, *redisClient)
+	fanIn := concurrency.GenAggr(&counter, *redisClient)
+	go usecase.PriceAggregator(redisClient, fanIn)
 
+	// Периодически читаем данные
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	t := time.Now()
+	for {
+		select {
+		case <-ticker.C:
+			usecase.GetAllPrices(t, redisClient)
+		}
+	}
+	fmt.Println("Программа завершена.")
 	// Закрываем канал цен - это приведет к завершению FanOut
 
 	logger.Info("Все операции завершены")

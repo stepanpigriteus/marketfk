@@ -18,7 +18,7 @@ type WorkerStr struct {
 func NewWorker(id int, in <-chan model.Price, wg *sync.WaitGroup, counter *atomic.Uint64, out chan model.Price) *WorkerStr {
 	return &WorkerStr{
 		In:      in,
-		Out:     out, 
+		Out:     out,
 		Id:      id,
 		Counter: counter,
 		wg:      wg,
@@ -31,9 +31,8 @@ func (w *WorkerStr) Run() {
 	for price := range w.In {
 		// w.Counter.Add(1)
 		// Здесь должна быть ебучая логика отправки в канал:
-		log.Printf("Worker %d: обработана цена %+v", w.Id, price)
+		// log.Printf("Worker %d: обработана цена %+v", w.Id, price)
 		w.Out <- price
-
 	}
 	log.Printf("Worker %d завершает работу, канал закрыт", w.Id)
 }

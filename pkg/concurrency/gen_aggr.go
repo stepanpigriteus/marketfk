@@ -1,19 +1,16 @@
 package concurrency
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"marketfuck/internal/adapter/in/exchange/live"
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/domain/model"
-	"os"
 	"sync"
 	"sync/atomic"
 )
 
-func GenAggr(counter *atomic.Uint64, redis redis.RedisCache) {
+func GenAggr(counter *atomic.Uint64, redis redis.RedisCache) <-chan model.Price {
 	ports := []string{"40101", "40102", "40103"}
 
 	var wg sync.WaitGroup
@@ -85,48 +82,5 @@ func GenAggr(counter *atomic.Uint64, redis redis.RedisCache) {
 		fmt.Println("Все операции завершены.")
 	}()
 
-	// Обработка данных
-
-	file, err := os.OpenFile("prices.json", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatalf("Не удалось открыть файл: %v", err)
-	}
-	defer file.Close()
-
-	// нужно вовзращать значение из функции - работу с редисом вынести прочь
-	for price := range fanInChan {
-
-		// Преобразуем price в JSON
-		priceJSON, err := json.Marshal(price)
-		if err != nil {
-			log.Printf("Ошибка сериализации: %v", err)
-			continue
-		}
-
-		// Создаем ключ
-		key := fmt.Sprintf("%s:%s", price.PairName, price.Exchange) // например ETHUSDT:Exchange2
-
-		// Устанавливаем в Redis без TTL (0)
-		err = redis.Set(context.Background(), key, string(priceJSON), 0)
-		if err != nil {
-			log.Printf("Ошибка установки в Redis: %v", err)
-		}
-		ctx := context.Background()
-		keys := "ETHUSDT:Exchange2"
-
-		value, err := redis.Get(ctx, keys)
-		if err != nil {
-			log.Printf("Ошибка при получении из Redis: %v", err)
-		} else {
-			var price model.Price
-			err = json.Unmarshal([]byte(value), &price)
-			if err != nil {
-				log.Printf("Ошибка при разборе JSON: %v", err)
-			} else {
-				fmt.Printf("Извлечено из кеша: %+v\n", price)
-			}
-		}
-	}
-
-	fmt.Println("Программа завершена.")
+	return fanInChan
 }

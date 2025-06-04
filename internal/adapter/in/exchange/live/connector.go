@@ -35,7 +35,7 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 
 		priceCh := make(chan model.Price, 100)
 
-		readCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		readCtx := context.Background()
 		client.StartReading(readCtx, priceCh)
 
 		for price := range priceCh {
@@ -46,7 +46,7 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 				break
 			}
 		}
-		cancel() // Закрываем контекст чтения
+		// cancel() // Закрываем контекст чтения
 
 		log.Printf("Соединение с %s разорвано, попытка переподключения", address)
 		if !tryReconnect(ctx, client, address, maxRetries, maxBackoff) {
