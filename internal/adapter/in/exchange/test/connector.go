@@ -118,3 +118,73 @@ func (g *TestGenerator) generatePrice(pair string) model.Price {
 		Timestamp: int64(time.Now().Second()),
 	}
 }
+
+// запускает несколько тестовых генераторов
+func StartTestGenerators(wg *sync.WaitGroup, output chan<- model.Price) {
+	exchanges := []string{"TestExchange1", "TestExchange2", "TestExchange3"}
+
+	for _, exchangeName := range exchanges {
+		wg.Add(1)
+		go GenConnectAndRead(exchangeName, wg, output)
+	}
+}
+
+// запускает один тестовый генератор с конфигурируемыми параметрами
+func StartSingleTestGenerator(exchangeName string, pairs []string, interval time.Duration, wg *sync.WaitGroup, output chan<- model.Price) {
+	defer wg.Done()
+
+	log.Printf("Запуск конфигурируемого тестового генератора для %s", exchangeName)
+
+	if len(pairs) == 0 {
+		pairs = []string{"BTCUSDT", "DOGEUSDT", "TONUSDT", "SOLUSDT", "ETHUSDT"}
+	}
+
+	generator := NewTestGenerator(exchangeName)
+	generator.Pairs = pairs
+	generator.Ticker.Stop() // Останавливаем старый тикер
+	generator.Ticker = time.NewTicker(interval)
+	defer generator.Ticker.Stop()
+
+	ctx := context.Background()
+	rand.Seed(time.Now().UnixNano())
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("Конфигурируемый тестовый генератор %s остановлен", exchangeName)
+			return
+		case <-generator.Ticker.C:
+			for _, pair := range generator.Pairs {
+				price := generator.generatePrice(pair)
+
+				select {
+				case output <- price:
+				case <-ctx.Done():
+					return
+				default:
+					// Канал заполнен, можно добавить логику буферизации или просто пропустить
+				}
+			}
+		}
+	}
+}
+
+// генерирует исторические данные для инициализации системы
+func GenerateHistoricalData(exchangeName string, pairs []string, duration time.Duration, interval time.Duration) []model.Price {
+	generator := NewTestGenerator(exchangeName)
+	generator.Pairs = pairs
+
+	var prices []model.Price
+	startTime := time.Now().Add(-duration)
+
+	for t := startTime; t.Before(time.Now()); t = t.Add(interval) {
+		for _, pair := range pairs {
+			price := generator.generatePrice(pair)
+			price.Timestamp = t
+			prices = append(prices, price)
+		}
+	}
+
+	log.Printf("Сгенерировано %d исторических записей для %s", len(prices), exchangeName)
+	return prices
+}
