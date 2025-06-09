@@ -16,7 +16,7 @@ func NewPriceRepository(db *sql.DB) *PriceRepository {
 	return &PriceRepository{db: db}
 }
 
-// дописать передачу аггрегантов
+// написать нормальную функцию вставки данных!!!
 func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.AggregatedPrice) error {
 	if len(prices) == 0 {
 		return nil
