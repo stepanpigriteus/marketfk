@@ -6,9 +6,11 @@ import (
 	"log"
 	"marketfuck/internal/application/port/out"
 	"marketfuck/internal/domain/model"
+	"marketfuck/internal/domain/service"
 	"time"
 )
 
+// сохраняем данные с источника в кеш
 func PriceAggregator(cache out.CacheClient, prices <-chan model.Price) {
 	count := 0
 	for price := range prices {
@@ -22,7 +24,8 @@ func PriceAggregator(cache out.CacheClient, prices <-chan model.Price) {
 			log.Printf("Ошибка установки цены в кеш: %v", err)
 		}
 		count++
-		fmt.Println(count)
+		// fmt.Println(price)
+		// fmt.Println(count) // ебучий каунтер
 	}
 }
 
@@ -50,7 +53,7 @@ func CleanupOldPrices(cache out.CacheClient, thresholdMillis int64) {
 	}
 }
 
-func GetAllPrices(t time.Time, cache out.CacheClient) {
+func GetAllPrices(t time.Time, cache out.CacheClient, marketService *service.MarketService) {
 	ctx := context.Background()
 	var allKeys []string
 	var cursor uint64
@@ -71,7 +74,7 @@ func GetAllPrices(t time.Time, cache out.CacheClient) {
 
 		allKeys = append(allKeys, keys...)
 		k := time.Since(t).Seconds()
-		fmt.Printf("Итерация %d: cursor=%d, получено ключей: %d, за %f\n", iteration, cursor, len(keys), k)
+		fmt.Printf("Итерация %d: cursor=%d, получено ключей: %d, за %f ", iteration, cursor, len(keys), k)
 
 		cursor = newCursor
 		iteration++
@@ -83,3 +86,6 @@ func GetAllPrices(t time.Time, cache out.CacheClient) {
 
 	fmt.Printf("ИТОГО найдено ключей: %d за %d итераций\n", len(allKeys), iteration)
 }
+
+// берем ключи с таймером 61
+//

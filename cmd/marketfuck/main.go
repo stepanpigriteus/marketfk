@@ -7,6 +7,7 @@ import (
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
 	usecase "marketfuck/internal/application/usecase_impl_for_port_in"
+	"marketfuck/internal/domain/service"
 	"marketfuck/pkg/concurrency"
 	"marketfuck/pkg/config"
 	"marketfuck/pkg/logger"
@@ -46,25 +47,27 @@ func main() {
 	if err != nil {
 		log.Fatalf("Невозможно подключиться к Redis: %v", err)
 	}
-
 	defer redisClient.Close()
+
+	repo := postgres.NewPriceRepository(db)
+	marketService := service.NewMarketService(repo)
+	// дописать передачу сервиса
+	fmt.Println(marketService)
 
 	server := http.NewServer("8081", db, logger)
 	logger.Info("[4/4] Time to run server!")
 	go server.RunServer()
 
-	// нужно возвращать данные из агрегации и передавать в функцию управления редисом и базой
 	fanIn := concurrency.GenAggr(&counter, *redisClient)
 	go usecase.PriceAggregator(redisClient, fanIn)
 
-	// Периодически читаем данные
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	t := time.Now()
 	for {
 		select {
 		case <-ticker.C:
-			usecase.GetAllPrices(t, redisClient)
+			usecase.GetAllPrices(t, redisClient, marketService)
 		}
 	}
 	fmt.Println("Программа завершена.")
