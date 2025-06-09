@@ -36,6 +36,7 @@ func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.Aggregat
 	query = query[:len(query)-1]
 
 	_, err := r.db.ExecContext(ctx, query, args)
+	fmt.Println("done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	return err
 }
 

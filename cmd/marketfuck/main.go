@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"marketfuck/internal/adapter/in/http"
@@ -22,7 +23,7 @@ func main() {
 	logger := logger.NewSlogAdapter()
 	logger.Info("[1/4] Reading configurations")
 	cfg := config.LoadConfig()
-
+	ctx := context.Background()
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.DB.Host,
@@ -67,11 +68,11 @@ func main() {
 		case <-ticker.C:
 			redisData := usecase.GetAllPrices(redisClient, marketService)
 			// передать в для паковки в базу
-
+			marketService.SavePrice(ctx, redisData)
 			fmt.Println(redisData)
 		}
 	}
-	fmt.Println("Программа завершена.")
+
 	// Закрываем канал цен - это приведет к завершению FanOut
 
 	logger.Info("Все операции завершены")

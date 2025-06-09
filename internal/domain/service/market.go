@@ -16,15 +16,25 @@ func NewMarketService(repo out.PriceRepository) *MarketService {
 	return &MarketService{aggregatedRepo: repo}
 }
 
-func (s *MarketService) SaveAggregatedPricesBatch(ctx context.Context, prices []model.AggregatedPrice) error {
-	// добавить расчет средних и т.д.
-	// сериализовать в структуру
-	if batchRepo, ok := s.aggregatedRepo.(interface {
-		SaveAggregatedPricesBatch(context.Context, []model.AggregatedPrice) error
-	}); ok {
-		return batchRepo.SaveAggregatedPricesBatch(ctx, prices)
+// func (s *MarketService) SaveAggregatedPricesBatch(ctx context.Context, prices []model.AggregatedPrice) error {
+// 	if batchRepo, ok := s.aggregatedRepo.(interface {
+// 		SaveAggregatedPricesBatch(context.Context, []model.AggregatedPrice) error
+// 	}); ok {
+// 		return batchRepo.SaveAggregatedPricesBatch(ctx, prices)
+// 	}
+// 	return errors.New("repository does not support batch insert")
+// }
+
+func (s *MarketService) SavePrice(ctx context.Context, price []model.AggregatedPrice) error {
+	if len(price) == 0 {
+		return errors.New("price lenght equal zero")
 	}
-	return errors.New("repository does not support batch insert")
+	err := s.aggregatedRepo.SavePrice(ctx, price)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *MarketService) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error) {
