@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"marketfuck/internal/domain/model"
+	"strings"
 	"time"
 )
 
@@ -22,21 +23,30 @@ func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.Aggregat
 		return nil
 	}
 
-	query := `
-		INSERT INTO aggregated_prices 
-		    (pair_name, exchange, timestamp, average_price, min_price, max_price)
-		VALUES 
-	`
-	args := []interface{}{}
-	for i, p := range prices {
-		idx := i * 6
-		query += fmt.Sprintf("($%d,$%d,$%d,$%d,$%d,$%d),", idx+1, idx+2, idx+3, idx+4, idx+5, idx+6)
-		args = append(args, p.PairName, p.Exchange, p.Timestamp, p.AveragePrice, p.MinPrice, p.MaxPrice)
-	}
-	query = query[:len(query)-1]
+	query := `INSERT INTO aggregated_prices (pair_name, exchange, timestamp, average_price, min_price, max_price) VALUES `
+	var args []interface{}
+	var valueStrings []string
 
-	_, err := r.db.ExecContext(ctx, query, args)
-	fmt.Println("done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+	for i, p := range prices {
+		base := i * 6
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)",
+			base+1, base+2, base+3, base+4, base+5, base+6,
+		))
+
+		args = append(args,
+			p.PairName,
+			p.Exchange,
+			p.Timestamp,
+			p.AveragePrice,
+			p.MinPrice,
+			p.MaxPrice,
+		)
+	}
+
+	query += strings.Join(valueStrings, ", ")
+
+	// 🔧 Без троеточия — передаём args как []interface{}
+	_, err := r.db.ExecContext(ctx, query, args...)
 	return err
 }
 
