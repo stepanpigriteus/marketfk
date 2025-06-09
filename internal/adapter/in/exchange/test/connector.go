@@ -1,7 +1,10 @@
 package test
 
 import (
+	"context"
+	"log"
 	"marketfuck/internal/domain/model"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -39,6 +42,79 @@ func NewTestGenerator(exchangeName string) *TestGenerator {
 		Pairs:        pairs,
 		BasePrice:    basePrice,
 		PriceChanges: priceChanges,
-		Ticker:       time.NewTicker(100 * time.Millisecond), // Генерация каждые 100мс
+		Ticker:       time.NewTicker(100 * time.Millisecond), // Генерация каждые 100 мс
+	}
+}
+
+// генерирует синтетические данные и отправляет их в канал
+func GenConnectAndRead(exchangeName string, wg *sync.WaitGroup, output chan<- model.Price) {
+	defer wg.Done()
+
+	log.Printf("Запуск тестового генератора для %s", exchangeName)
+
+	generator := NewTestGenerator(exchangeName)
+	defer generator.Ticker.Stop()
+
+	ctx := context.Background()
+
+	rand.Seed(time.Now().UnixNano())
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("Тестовый генератор %s остановлен", exchangeName)
+			return
+		case <-generator.Ticker.C:
+			// Генерируем цены для всех пар
+			for _, pair := range generator.Pairs {
+				price := generator.generatePrice(pair)
+
+				select {
+				case output <- price:
+				case <-ctx.Done():
+					log.Printf("Контекст отменен для генератора %s", exchangeName)
+					return
+				default:
+					log.Printf("Канал заполнен для %s:%s, пропускаем обновление", exchangeName, pair)
+				}
+			}
+		}
+	}
+}
+
+func (g *TestGenerator) generatePrice(pair string) model.Price {
+	g.Mu.Lock()
+	defer g.Mu.Unlock()
+
+	basePrice := g.BasePrice[pair]
+	maxChange := g.PriceChanges[pair]
+
+	// Генерируем случайное изменение цены в пределах ±maxChange%
+	changePercent := (rand.Float64() - 0.5) * 2 * maxChange
+	priceChange := basePrice * changePercent
+
+	newPrice := basePrice + priceChange
+
+	// Обновляем базовую цену для следующей итерации (эмуляция трендов)
+	g.BasePrice[pair] = newPrice
+
+	// Добавляем некоторую волатильность
+	volatility := rand.Float64() * 0.001 // 0.1% случайной волатильности
+	if rand.Float64() > 0.5 {
+		newPrice += newPrice * volatility
+	} else {
+		newPrice -= newPrice * volatility
+	}
+
+	// Убеждаемся, что цена положительная
+	if newPrice <= 0 {
+		newPrice = basePrice * 0.9 // Минимум 90% от базовой цены
+	}
+
+	return model.Price{
+		PairName:  pair,
+		Price:     newPrice,
+		Exchange:  g.Exchange.Name,
+		Timestamp: int64(time.Now().Second()),
 	}
 }
