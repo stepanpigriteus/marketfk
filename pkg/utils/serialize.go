@@ -11,18 +11,15 @@ import (
 )
 
 func AggregatePricesByMinute(prices []string) ([]model.AggregatedPrice, error) {
-	// Мапа для группировки
 	grouped := make(map[string][]model.Price)
 
-	// Разбираем строки в массив объектов Price
 	for _, priceStr := range prices {
-		// Разделяем строку на две части: до первого двоеточия и сам JSON
+
 		parts := strings.SplitN(priceStr, ":", 4)
 		if len(parts) != 4 {
 			return nil, fmt.Errorf("неверный формат строки: %s", priceStr)
 		}
 
-		// Извлекаем символ (пару валют) и биржу
 		pairName := parts[0]
 		exchange := parts[1]
 		timestamp, err := strconv.ParseInt(parts[2], 10, 64)
@@ -31,7 +28,6 @@ func AggregatePricesByMinute(prices []string) ([]model.AggregatedPrice, error) {
 			continue
 		}
 
-		// Разбираем JSON часть строки
 		var priceData struct {
 			Symbol   string  `json:"symbol"`
 			Exchange string  `json:"Exchange"`
@@ -42,23 +38,20 @@ func AggregatePricesByMinute(prices []string) ([]model.AggregatedPrice, error) {
 			continue
 		}
 
-		// Используем timestamp для вычисления начала минуты
-		minute := timestamp / 60000 * 60000 // округление до начала минуты
+		minute := timestamp / 60000 * 60000
 		groupKey := fmt.Sprintf("%s:%s:%d", pairName, exchange, minute)
 
-		// Добавляем цену в группу
 		grouped[groupKey] = append(grouped[groupKey], model.Price{
 			PairName: pairName,
 			Exchange: exchange,
 			TSR:      timestamp,
-			Price:    priceData.Price, // Получаем цену из JSON
+			Price:    priceData.Price,
 		})
 	}
 
-	// Составляем итоговые агрегированные данные
 	var results []model.AggregatedPrice
 	for groupKey, prices := range grouped {
-		// Разбираем ключ, чтобы извлечь PairName, Exchange и timestamp
+
 		parts := strings.Split(groupKey, ":")
 		pair, exchange := parts[0], parts[1]
 		minuteTs, _ := strconv.ParseInt(parts[2], 10, 64)

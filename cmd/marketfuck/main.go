@@ -66,7 +66,7 @@ func main() {
 		select {
 		case <-ticker.C:
 			redisData := usecase.GetAllPrices(redisClient, marketService)
-			// сериализовать на месте или передать в SaveAggregatedPricesBatch
+			// передать в для паковки в базу
 
 			fmt.Println(redisData)
 		}
