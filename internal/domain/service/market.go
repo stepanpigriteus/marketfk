@@ -17,6 +17,8 @@ func NewMarketService(repo out.PriceRepository) *MarketService {
 }
 
 func (s *MarketService) SaveAggregatedPricesBatch(ctx context.Context, prices []model.AggregatedPrice) error {
+	// добавить расчет средних и т.д.
+	// сериализовать в структуру
 	if batchRepo, ok := s.aggregatedRepo.(interface {
 		SaveAggregatedPricesBatch(context.Context, []model.AggregatedPrice) error
 	}); ok {

@@ -51,8 +51,6 @@ func main() {
 
 	repo := postgres.NewPriceRepository(db)
 	marketService := service.NewMarketService(repo)
-	// дописать передачу сервиса
-	fmt.Println(marketService)
 
 	server := http.NewServer("8081", db, logger)
 	logger.Info("[4/4] Time to run server!")
@@ -61,13 +59,16 @@ func main() {
 	fanIn := concurrency.GenAggr(&counter, *redisClient)
 	go usecase.PriceAggregator(redisClient, fanIn)
 
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-	t := time.Now()
+
 	for {
 		select {
 		case <-ticker.C:
-			usecase.GetAllPrices(t, redisClient, marketService)
+			redisData := usecase.GetAllPrices(redisClient, marketService)
+			// сериализовать на месте или передать в SaveAggregatedPricesBatch
+
+			fmt.Println(redisData)
 		}
 	}
 	fmt.Println("Программа завершена.")

@@ -7,25 +7,25 @@ import (
 	"marketfuck/internal/application/port/out"
 	"marketfuck/internal/domain/model"
 	"marketfuck/internal/domain/service"
+	"marketfuck/pkg/utils"
+	"strconv"
+	"strings"
 	"time"
 )
 
 // сохраняем данные с источника в кеш
 func PriceAggregator(cache out.CacheClient, prices <-chan model.Price) {
-	count := 0
 	for price := range prices {
-
 		price.TSR = time.Now().UnixMilli()
 
 		key := fmt.Sprintf("%s:%s:%d", price.PairName, price.Exchange, price.TSR)
+
+		// log.Printf("Добавляем цену в кеш: %s (TSR=%d, now=%d)", key, price.TSR, time.Now().UnixMilli())
 
 		err := cache.SetPrice(context.Background(), key, price, 0)
 		if err != nil {
 			log.Printf("Ошибка установки цены в кеш: %v", err)
 		}
-		count++
-		// fmt.Println(price)
-		// fmt.Println(count) // ебучий каунтер
 	}
 }
 
@@ -53,12 +53,15 @@ func CleanupOldPrices(cache out.CacheClient, thresholdMillis int64) {
 	}
 }
 
-func GetAllPrices(t time.Time, cache out.CacheClient, marketService *service.MarketService) {
+func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) []model.AggregatedPrice {
 	ctx := context.Background()
-	var allKeys []string
-	var cursor uint64
+	var recentKeys []string
+	var cursor uint64 = 0
 	maxIterations := 1000
 	iteration := 0
+
+	from := time.Now().UnixMilli() - 10_001
+	to := time.Now().UnixMilli()
 
 	for {
 		if iteration >= maxIterations {
@@ -66,26 +69,54 @@ func GetAllPrices(t time.Time, cache out.CacheClient, marketService *service.Mar
 			break
 		}
 
-		keys, newCursor, err := cache.Scan(ctx, cursor, "*:*", 10000)
+		keys, newCursor, err := cache.Scan(ctx, cursor, "*:*:*", 1000)
 		if err != nil {
-			log.Printf("Ошибка SCAN: %v", err)
+			log.Printf("Ошибка SCAN на итерации %d: %v", iteration, err)
 			break
 		}
 
-		allKeys = append(allKeys, keys...)
-		k := time.Since(t).Seconds()
-		fmt.Printf("Итерация %d: cursor=%d, получено ключей: %d, за %f ", iteration, cursor, len(keys), k)
+		for _, key := range keys {
+			parts := strings.Split(key, ":")
+			if len(parts) != 3 {
+				log.Printf("Ключ с неожиданной структурой: %s", key)
+				continue
+			}
+
+			timestampMillis, err := strconv.ParseInt(parts[2], 10, 64)
+			if err != nil {
+				log.Printf("Ошибка парсинга timestamp из ключа %s: %v", key, err)
+				continue
+			}
+
+			// Проверяем, попадает ли ключ в диапазон времени
+			if timestampMillis >= from && timestampMillis <= to {
+				// Получаем значение по ключу
+				value, err := cache.Get(ctx, key)
+				if err != nil {
+					log.Printf("Ошибка получения значения для ключа %s: %v", key, err)
+					continue
+				}
+
+				// Добавляем найденный ключ и его значение в результат
+				recentKeys = append(recentKeys, fmt.Sprintf("%s: %s", key, value))
+			}
+		}
 
 		cursor = newCursor
 		iteration++
 
+		// Завершаем сканирование, если курсор вернулся к нулю
 		if cursor == 0 {
+			log.Printf("Сканирование завершено (cursor = 0)")
 			break
 		}
 	}
 
-	fmt.Printf("ИТОГО найдено ключей: %d за %d итераций\n", len(allKeys), iteration)
+	count := len(recentKeys)
+	log.Printf("Найдено ключей за последние 10 секунд: %d", count)
+	aggr, err := utils.AggregatePricesByMinute(recentKeys)
+	if err != nil {
+		fmt.Println("некорректная агрегация", err)
+	}
+	return aggr
 }
-
-// берем ключи с таймером 61
-//
