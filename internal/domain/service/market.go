@@ -16,15 +16,6 @@ func NewMarketService(repo out.PriceRepository) *MarketService {
 	return &MarketService{aggregatedRepo: repo}
 }
 
-// func (s *MarketService) SaveAggregatedPricesBatch(ctx context.Context, prices []model.AggregatedPrice) error {
-// 	if batchRepo, ok := s.aggregatedRepo.(interface {
-// 		SaveAggregatedPricesBatch(context.Context, []model.AggregatedPrice) error
-// 	}); ok {
-// 		return batchRepo.SaveAggregatedPricesBatch(ctx, prices)
-// 	}
-// 	return errors.New("repository does not support batch insert")
-// }
-
 func (s *MarketService) SavePrice(ctx context.Context, price []model.AggregatedPrice) error {
 	if len(price) == 0 {
 		return errors.New("price lenght equal zero")

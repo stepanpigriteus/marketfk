@@ -29,37 +29,35 @@ func PriceAggregator(cache out.CacheClient, prices <-chan model.Price) {
 	}
 }
 
-func CleanupOldPrices(cache out.CacheClient, thresholdMillis int64) {
+func CleanupOldPrices(cache out.CacheClient, thresholdMillis int64, delay int64) error {
 	ctx := context.Background()
 	keys, err := cache.Keys(ctx, "*")
 	if err != nil {
-		log.Printf("Ошибка получения ключей: %v", err)
-		return
+		return fmt.Errorf("Ошибка получения ключей: %v", err)
 	}
-
-	now := time.Now().UnixMilli()
 	for _, key := range keys {
 		price, found, err := cache.GetPrice(ctx, key)
 		if err != nil || !found {
 			continue
 		}
 
-		if now-price.TSR > thresholdMillis {
+		if price.TSR <= thresholdMillis {
 			err := cache.Delete(ctx, key)
 			if err != nil {
-				log.Printf("Ошибка при удалении ключа %s: %v", key, err)
+				return fmt.Errorf("Ошибка при удалении ключа %s: %v", key, err)
 			}
 		}
 	}
+	return nil
 }
 
-func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) []model.AggregatedPrice {
+func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) ([]model.AggregatedPrice, int64) {
 	ctx := context.Background()
 	var recentKeys []string
 	var cursor uint64 = 0
 	maxIterations := 1000
 	iteration := 0
-
+	// возможно стоит передавать delay из main?
 	from := time.Now().UnixMilli() - 10_001
 	to := time.Now().UnixMilli()
 
@@ -118,5 +116,5 @@ func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) [
 	if err != nil {
 		fmt.Println("некорректная агрегация", err)
 	}
-	return aggr
+	return aggr, to
 }

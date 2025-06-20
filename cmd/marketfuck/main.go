@@ -8,6 +8,7 @@ import (
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
 	usecase "marketfuck/internal/application/usecase_impl_for_port_in"
+	"marketfuck/internal/domain/model"
 	"marketfuck/internal/domain/service"
 	"marketfuck/pkg/concurrency"
 	"marketfuck/pkg/config"
@@ -59,17 +60,40 @@ func main() {
 
 	fanIn := concurrency.GenAggr(&counter, *redisClient)
 	go usecase.PriceAggregator(redisClient, fanIn)
-
-	ticker := time.NewTicker(10 * time.Second)
+	var delay int64 = 10
+	ticker := time.NewTicker(time.Duration(delay) * time.Second)
 	defer ticker.Stop()
+	var defRedisData []model.AggregatedPrice
 
 	for {
 		select {
 		case <-ticker.C:
-			redisData := usecase.GetAllPrices(redisClient, marketService)
-			// передать в для паковки в базу
-			marketService.SavePrice(ctx, redisData)
-			fmt.Println(redisData)
+			redisData, threshold := usecase.GetAllPrices(redisClient, marketService)
+			// fmt.Println(redisData)
+
+			if len(defRedisData) == 0 {
+				if err := marketService.SavePrice(ctx, redisData); err != nil {
+					defRedisData = append(defRedisData, redisData...)
+					logger.Error("Ошибка при сохранении данных: ", err)
+				} else {
+					fmt.Println("Данные успешно сохранены в базу.")
+				}
+			} else {
+				defRedisData = append(defRedisData, redisData...)
+				if err := marketService.SavePrice(ctx, defRedisData); err != nil {
+					logger.Error("Ошибка при сохранении данных: ", err)
+				} else {
+					fmt.Println("Данные успешно сохранены в базу.")
+					defRedisData = nil
+				}
+			}
+
+			// После сохранения данных очищаем старые записи из Redis
+			if err := usecase.CleanupOldPrices(redisClient, threshold, delay); err != nil {
+				logger.Error("Ошибка при удалении старых данных: ", err)
+			} else {
+				fmt.Println("Старые данные из редис успешно удалены.")
+			}
 		}
 	}
 
