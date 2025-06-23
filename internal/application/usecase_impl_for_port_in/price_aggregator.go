@@ -94,6 +94,7 @@ func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) (
 					log.Printf("Ошибка получения значения для ключа %s: %v", key, err)
 					continue
 				}
+				
 
 				// Добавляем найденный ключ и его значение в результат
 				recentKeys = append(recentKeys, fmt.Sprintf("%s: %s", key, value))

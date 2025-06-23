@@ -45,13 +45,37 @@ func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.Aggregat
 
 	query += strings.Join(valueStrings, ", ")
 
-	// 🔧 Без троеточия — передаём args как []interface{}
 	_, err := r.db.ExecContext(ctx, query, args...)
 	return err
 }
 
+// протестить
 func (r *PriceRepository) GetLatestPrice(ctx context.Context, pairName string) (model.Price, error) {
-	return model.Price{}, nil
+	validPairs := map[string]bool{
+		"BTCUSDT":  true,
+		"DOGEUSDT": true,
+		"TONUSDT":  true,
+		"SOLUSDT":  true,
+		"ETHUSDT":  true,
+	}
+
+	if len(pairName) == 0 || !validPairs[pairName] {
+		return model.Price{}, fmt.Errorf("incorrect PairName")
+	}
+	var price model.Price
+	query := `
+	SELECT pair_name, exchange, price, EXTRACT(EPOCH FROM timestamp) AS timestamp
+	FROM trading_data
+	WHERE pair_name = $1 AND exchange = 'binance'
+	ORDER BY timestamp DESC
+	LIMIT 1;
+`
+
+	err := r.db.QueryRowContext(ctx, query, pairName).Scan(&price.PairName, &price.Exchange, &price.Price, &price.Timestamp)
+	if err != nil {
+		return model.Price{}, fmt.Errorf("failed to fetch latest price: %v", err)
+	}
+	return price, nil
 }
 
 func (r *PriceRepository) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error) {
