@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"marketfuck/internal/application/port"
 	"marketfuck/internal/application/port/in"
@@ -20,9 +21,31 @@ func NewPriceHandler(priceService in.PriceService, logger port.Logger) *PriceHan
 	}
 }
 
-
 func (h *PriceHandler) HandleGetLatestPrice(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(">>> GetLatestPrice handler called")
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "application/json")
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	pairName := parts[3]
+	aggregatedPrice, err := h.priceService.GetLatestPrice(ctx, pairName)
+	if err != nil {
+		h.logger.Error("Incorrect GetLatestPrice result")
+		http.Error(w, `{"error":"failed to fetch latest price"}`, http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(aggregatedPrice)
+}
+
+// обрабатывает запрос на получение последней цены с конкретной биржи
+func (h *PriceHandler) HandleGetLatestPriceByExchange(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info(">>> GetLatestPriceByExange handler called")
 	ctx := r.Context()
 	w.Header().Set("Content-Type", "application/json")
 
@@ -31,22 +54,18 @@ func (h *PriceHandler) HandleGetLatestPrice(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
+	if len(parts) != 4 {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return
 	}
+	pairName := parts[3]
+	exchangeID := parts[2]
 
-	pairName := parts[2]
-	fmt.Println(">>>>", pairName)
-	latestPrice, err := h.priceService.GetLatestPrice(ctx, pairName)
+	latestPriceByEx, err := h.priceService.GetLatestPriceByExchange(ctx, exchangeID, pairName)
 	if err != nil {
 		h.logger.Error("Incorrect GetAveragePrice result")
 	}
-	fmt.Println(">>>>", latestPrice)
-}
-
-// обрабатывает запрос на получение последней цены с конкретной биржи
-func (h *PriceHandler) HandleGetLatestPriceByExchange(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(">>>>", latestPriceByEx)
 }
 
 // обрабатывает запрос на получение наивысшей цены за период

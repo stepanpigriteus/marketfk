@@ -50,32 +50,33 @@ func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.Aggregat
 }
 
 // протестить
-func (r *PriceRepository) GetLatestPrice(ctx context.Context, pairName string) (model.Price, error) {
-	validPairs := map[string]bool{
-		"BTCUSDT":  true,
-		"DOGEUSDT": true,
-		"TONUSDT":  true,
-		"SOLUSDT":  true,
-		"ETHUSDT":  true,
-	}
-
-	if len(pairName) == 0 || !validPairs[pairName] {
-		return model.Price{}, fmt.Errorf("incorrect PairName")
-	}
-	var price model.Price
+func (r *PriceRepository) GetLatestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) {
+	var aggregatedPrice model.AggregatedPrice
 	query := `
-	SELECT pair_name, exchange, price, EXTRACT(EPOCH FROM timestamp) AS timestamp
-	FROM trading_data
-	WHERE pair_name = $1 AND exchange = 'binance'
-	ORDER BY timestamp DESC
-	LIMIT 1;
-`
+    SELECT pair_name, exchange, average_price, timestamp
+    FROM aggregated_prices
+    WHERE pair_name = $1 
+    ORDER BY timestamp DESC
+    LIMIT 1;
+    `
 
-	err := r.db.QueryRowContext(ctx, query, pairName).Scan(&price.PairName, &price.Exchange, &price.Price, &price.Timestamp)
+	err := r.db.QueryRowContext(ctx, query, pairName).Scan(
+		&aggregatedPrice.PairName,
+		&aggregatedPrice.Exchange,
+		&aggregatedPrice.AveragePrice,
+		&aggregatedPrice.Timestamp,
+	)
 	if err != nil {
-		return model.Price{}, fmt.Errorf("failed to fetch latest price: %v", err)
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("no data found for pair %s", pairName)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("failed to fetch latest price: %v", err)
 	}
-	return price, nil
+
+	fmt.Printf("Fetched aggregated price: PairName=%s, Exchange=%s, AveragePrice=%f, Timestamp=%s\n",
+		aggregatedPrice.PairName, aggregatedPrice.Exchange, aggregatedPrice.AveragePrice, aggregatedPrice.Timestamp)
+
+	return aggregatedPrice, nil
 }
 
 func (r *PriceRepository) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error) {

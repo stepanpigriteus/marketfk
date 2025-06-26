@@ -39,3 +39,7 @@ func (s *MarketService) GetPricesInPeriod(ctx context.Context, pairName string, 
 func (s *MarketService) GetPricesInPeriodByExchange(ctx context.Context, exchangeID, pairName string, startTime, endTime time.Time) ([]model.Price, error) {
 	return s.aggregatedRepo.GetPricesInPeriodByExchange(ctx, exchangeID, pairName, startTime, endTime)
 }
+
+func (s *MarketService) GetLatestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) {
+	return s.aggregatedRepo.GetLatestPrice(ctx, pairName)
+}
