@@ -6,6 +6,7 @@ import (
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
 	"marketfuck/internal/application/port/in"
 	"marketfuck/internal/domain/model"
+	"strings"
 	"time"
 )
 
@@ -25,10 +26,11 @@ func (s *priceService) GetLatestPrice(ctx context.Context, pairName string) (mod
 		"SOLUSDT":  true,
 		"ETHUSDT":  true,
 	}
-
+	pairName = strings.ToUpper(pairName)
 	if len(pairName) == 0 || !validPairs[pairName] {
 		return model.AggregatedPrice{}, fmt.Errorf("incorrect PairName")
 	}
+
 	price, err := s.priceRepo.GetLatestPrice(ctx, pairName)
 	if err != nil {
 		fmt.Printf("Error in GetLatestPrice: %v\n", err) // Логируем ошибку
@@ -39,8 +41,25 @@ func (s *priceService) GetLatestPrice(ctx context.Context, pairName string) (mod
 	return price, nil
 }
 
-func (s *priceService) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error) {
-	var price model.Price
+func (s *priceService) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
+	validPairs := map[string]bool{
+		"BTCUSDT":  true,
+		"DOGEUSDT": true,
+		"TONUSDT":  true,
+		"SOLUSDT":  true,
+		"ETHUSDT":  true,
+	}
+	pairName = strings.ToUpper(pairName)
+	if len(pairName) == 0 || !validPairs[pairName] {
+		return model.AggregatedPrice{}, fmt.Errorf("incorrect PairName")
+	}
+
+	price, err := s.priceRepo.GetLatestPriceByExchange(ctx, exchangeID, pairName)
+	if err != nil {
+		fmt.Printf("Error in GetLatestPrice: %v\n", err) // Логируем ошибк у
+		return model.AggregatedPrice{}, err
+	}
+
 	return price, nil
 }
 

@@ -28,7 +28,7 @@ func (s *MarketService) SavePrice(ctx context.Context, price []model.AggregatedP
 	return nil
 }
 
-func (s *MarketService) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error) {
+func (s *MarketService) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
 	return s.aggregatedRepo.GetLatestPriceByExchange(ctx, exchangeID, pairName)
 }
 

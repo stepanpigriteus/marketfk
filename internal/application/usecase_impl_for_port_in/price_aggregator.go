@@ -58,7 +58,7 @@ func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) (
 	maxIterations := 1000
 	iteration := 0
 	// возможно стоит передавать delay из main?
-	from := time.Now().UnixMilli() - 10_001
+	from := time.Now().UnixMilli() - 60_001
 	to := time.Now().UnixMilli()
 
 	for {
@@ -112,7 +112,7 @@ func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) (
 	}
 
 	count := len(recentKeys)
-	log.Printf("Найдено ключей за последние 10 секунд: %d", count)
+	log.Printf("Найдено ключей за последние 60 секунд: %d", count)
 	aggr, err := utils.AggregatePricesByMinute(recentKeys)
 	if err != nil {
 		fmt.Println("некорректная агрегация", err)

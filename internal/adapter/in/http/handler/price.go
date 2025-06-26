@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"marketfuck/internal/application/port"
 	"marketfuck/internal/application/port/in"
 	"net/http"
@@ -54,18 +53,30 @@ func (h *PriceHandler) HandleGetLatestPriceByExchange(w http.ResponseWriter, r *
 		return
 	}
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) != 4 {
+	if len(parts) < 4 {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return
 	}
-	pairName := parts[3]
-	exchangeID := parts[2]
+	pairName := parts[4]
+	exchangeID := parts[3]
+
+	if exchangeID == "" || pairName == "" {
+		http.Error(w, "invalid exchange or symbol", http.StatusBadRequest)
+		return
+	}
 
 	latestPriceByEx, err := h.priceService.GetLatestPriceByExchange(ctx, exchangeID, pairName)
 	if err != nil {
 		h.logger.Error("Incorrect GetAveragePrice result")
 	}
-	fmt.Println(">>>>", latestPriceByEx)
+	jsonResponse, err := json.Marshal(latestPriceByEx)
+	if err != nil {
+		http.Error(w, `{"error": "failed to serialize response"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }
 
 // обрабатывает запрос на получение наивысшей цены за период

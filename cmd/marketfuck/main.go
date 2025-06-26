@@ -60,7 +60,7 @@ func main() {
 
 	fanIn := concurrency.GenAggr(&counter, *redisClient)
 	go usecase.PriceAggregator(redisClient, fanIn)
-	var delay int64 = 10
+	var delay int64 = 60
 	ticker := time.NewTicker(time.Duration(delay) * time.Second)
 	defer ticker.Stop()
 	var defRedisData []model.AggregatedPrice

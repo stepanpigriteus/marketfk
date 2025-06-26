@@ -79,8 +79,30 @@ func (r *PriceRepository) GetLatestPrice(ctx context.Context, pairName string) (
 	return aggregatedPrice, nil
 }
 
-func (r *PriceRepository) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error) {
-	return model.Price{}, nil
+func (s *PriceRepository) GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	query := `
+   	SELECT pair_name, exchange, average_price, timestamp
+    FROM aggregated_prices
+    WHERE exchange = $1 AND pair_name = $2
+    ORDER BY timestamp DESC
+    LIMIT 1;
+    `
+
+	err := s.db.QueryRowContext(ctx, query, exchangeID, pairName).Scan(
+		&price.PairName,
+		&price.Exchange,
+		&price.AveragePrice,
+		&price.Timestamp,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("no data found for exchange %s and pair %s", exchangeID, pairName)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("failed to fetch latest price: %v", err)
+	}
+
+	return price, nil
 }
 
 func (r *PriceRepository) GetPricesInPeriod(ctx context.Context, pairName string, startTime, endTime time.Time) ([]model.Price, error) {

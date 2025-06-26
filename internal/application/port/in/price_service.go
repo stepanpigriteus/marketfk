@@ -8,7 +8,7 @@ import (
 
 type PriceService interface {
 	GetLatestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error)
-	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.Price, error)
+	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error)
 	GetHighestPrice(ctx context.Context, pairName string, period time.Duration) (model.Price, error)
 	GetHighestPriceByExchange(ctx context.Context, exchangeID, pairName string, period time.Duration) (model.Price, error)
 	GetLowestPrice(ctx context.Context, pairName string, period time.Duration) (model.Price, error)
