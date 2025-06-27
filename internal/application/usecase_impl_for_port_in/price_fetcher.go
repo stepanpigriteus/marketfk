@@ -73,13 +73,14 @@ func (s *priceService) GetHighestPriceInPeriod(ctx context.Context, pairName str
 		"ETHUSDT":  true,
 	}
 	pairName = strings.ToUpper(pairName)
-	fmt.Println(pairName,period, ctx)
-	if len(pairName) == 0 || !validPairs[pairName] {
+	
+	if len(pairName) == 0 || !validPairs[pairName]  {
 		return model.AggregatedPrice{}, fmt.Errorf("incorrect PairName")
 	}
+
 	price, err := s.priceRepo.GetHighestPriceInPeriod(ctx, pairName, period)
 	if err != nil {
-		fmt.Printf("Error in GetHighestPriceInPeriod: %v\n", err) // Логируем ошибк у
+		fmt.Printf("Error in GetHighestPriceInPeriod: %v\n", err)
 		return model.AggregatedPrice{}, err
 	}
 	return price, nil

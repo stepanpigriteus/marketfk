@@ -115,19 +115,23 @@ func (r *PriceRepository) GetPricesInPeriodByExchange(ctx context.Context, excha
 
 func (s *PriceRepository) GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
 	var price model.AggregatedPrice
+	lastTimestamp, err := s.GetLastRecordTime(ctx, pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
 
-	endTime := time.Now() // текущее время
+	endTime := lastTimestamp
 	startTime := endTime.Add(-period)
 	query := `
-		SELECT pair_name, exchange, max_price, timestamp
-		FROM aggregated_prices
-		WHERE pair_name = $1 AND timestamp >= $2 AND timestamp <= $3
-		ORDER BY timestamp DESC
-		LIMIT 1;
-	`
+	SELECT pair_name, exchange, MAX(max_price) as max_price, timestamp
+	FROM aggregated_prices
+	WHERE pair_name = $1 AND timestamp >= $2 AND timestamp <= $3
+	GROUP BY pair_name, exchange, timestamp
+	ORDER BY max_price DESC
+	LIMIT 1;
+`
 
-	// Выполняем запрос, передаем 3 параметра: pairName, startTime, endTime
-	err := s.db.QueryRowContext(ctx, query, pairName, startTime, endTime).Scan(
+	err = s.db.QueryRowContext(ctx, query, pairName, startTime, endTime).Scan(
 		&price.PairName,
 		&price.Exchange,
 		&price.MaxPrice,
@@ -138,4 +142,23 @@ func (s *PriceRepository) GetHighestPriceInPeriod(ctx context.Context, pairName 
 	}
 	fmt.Println(price)
 	return price, nil
+}
+
+// получение времени последней записи
+func (s *PriceRepository) GetLastRecordTime(ctx context.Context, pairName string) (time.Time, error) {
+	queryLastRecordTime := `
+		SELECT timestamp
+		FROM aggregated_prices
+		WHERE pair_name = $1
+		ORDER BY timestamp DESC
+		LIMIT 1
+	`
+
+	var lastTimestamp time.Time
+	err := s.db.QueryRowContext(ctx, queryLastRecordTime, pairName).Scan(&lastTimestamp)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("could not retrieve last record time for pair %s: %v", pairName, err)
+	}
+
+	return lastTimestamp, nil
 }
