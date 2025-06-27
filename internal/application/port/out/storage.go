@@ -11,7 +11,8 @@ type PriceRepository interface {
 	// изменить модель
 	GetLatestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error)
 	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error)
-	GetPricesInPeriod(ctx context.Context, pairName string, startTime, endTime time.Time) ([]model.Price, error)
+	GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error)
+	// GetPricesInPeriod(ctx context.Context, pairName string, period time.Duration) ([]model.AggregatedPrice, error)
 	GetPricesInPeriodByExchange(ctx context.Context, exchangeID, pairName string, startTime, endTime time.Time) ([]model.Price, error)
 }
 

@@ -63,8 +63,30 @@ func (s *priceService) GetLatestPriceByExchange(ctx context.Context, exchangeID,
 	return price, nil
 }
 
-func (s *priceService) GetHighestPrice(ctx context.Context, pairName string, period time.Duration) (model.Price, error) {
-	var price model.Price
+func (s *priceService) GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	validPairs := map[string]bool{
+		"BTCUSDT":  true,
+		"DOGEUSDT": true,
+		"TONUSDT":  true,
+		"SOLUSDT":  true,
+		"ETHUSDT":  true,
+	}
+	pairName = strings.ToUpper(pairName)
+	fmt.Println(pairName,period, ctx)
+	if len(pairName) == 0 || !validPairs[pairName] {
+		return model.AggregatedPrice{}, fmt.Errorf("incorrect PairName")
+	}
+	price, err := s.priceRepo.GetHighestPriceInPeriod(ctx, pairName, period)
+	if err != nil {
+		fmt.Printf("Error in GetHighestPriceInPeriod: %v\n", err) // Логируем ошибк у
+		return model.AggregatedPrice{}, err
+	}
+	return price, nil
+}
+
+func (s *priceService) GetHighestPrice(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
 	return price, nil
 }
 

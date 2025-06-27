@@ -2,10 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"marketfuck/internal/application/port"
 	"marketfuck/internal/application/port/in"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type PriceHandler struct {
@@ -79,6 +81,53 @@ func (h *PriceHandler) HandleGetLatestPriceByExchange(w http.ResponseWriter, r *
 	w.Write(jsonResponse)
 }
 
-// обрабатывает запрос на получение наивысшей цены за период
-func (h *PriceHandler) HandleGetHighestPrice(w http.ResponseWriter, r *http.Request) {
+func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info(">>> GetHighestPriceInPeriod handler called")
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "application/json")
+
+	if ctx == nil {
+		http.Error(w, `{"error":"invalid context"}`, http.StatusBadRequest)
+		return
+	}
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 4 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	symbol := parts[3]
+	if symbol == "" {
+		http.Error(w, "invalid symbol in path", http.StatusBadRequest)
+		return
+	}
+
+	queryParams := r.URL.Query()
+	periodStr := queryParams.Get("period")
+
+	if periodStr == "" {
+		http.Error(w, `{"error":"missing period query parameter"}`, http.StatusBadRequest)
+		return
+	}
+
+	period, err := time.ParseDuration(periodStr)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"invalid period: %s"}`, err), http.StatusBadRequest)
+		return
+	}
+
+	highestPriceInPeriod, err := h.priceService.GetHighestPriceInPeriod(ctx, symbol, period)
+	if err != nil {
+		h.logger.Error("Incorrect GetAveragePrice result")
+	}
+
+	jsonResponse, err := json.Marshal(highestPriceInPeriod)
+	if err != nil {
+		http.Error(w, `{"error": "failed to serialize response"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }

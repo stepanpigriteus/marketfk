@@ -18,6 +18,7 @@ func RegisterRoutes(mux *http.ServeMux, handlers *handler.AllHandlers) {
 	routes := []Route{
 		{Method: http.MethodGet, Path: "/prices/latest/", Handler: handlers.Price.HandleGetLatestPrice, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
 		{Method: http.MethodGet, Path: "/prices/latest/{exchange}/{symbol}", Handler: handlers.Price.HandleGetLatestPriceByExchange, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
+		{Method: http.MethodGet, Path: "/prices/highest/{symbol}", Handler: handlers.Price.HandleGetHighestPriceInPeriod, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
 	}
 
 	for _, route := range routes {
