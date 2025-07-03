@@ -6,7 +6,6 @@ import (
 	"log"
 	"marketfuck/internal/application/port/out"
 	"marketfuck/internal/domain/model"
-	"marketfuck/internal/domain/service"
 	"marketfuck/pkg/utils"
 	"strconv"
 	"strings"
@@ -19,7 +18,6 @@ func PriceAggregator(cache out.CacheClient, prices <-chan model.Price) {
 		price.TSR = time.Now().UnixMilli()
 
 		key := fmt.Sprintf("%s:%s:%d", price.PairName, price.Exchange, price.TSR)
-
 		// log.Printf("Добавляем цену в кеш: %s (TSR=%d, now=%d)", key, price.TSR, time.Now().UnixMilli())
 
 		err := cache.SetPrice(context.Background(), key, price, 0)
@@ -51,14 +49,14 @@ func CleanupOldPrices(cache out.CacheClient, thresholdMillis int64, delay int64)
 	return nil
 }
 
-func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) ([]model.AggregatedPrice, int64) {
+func GetAllPrices(cache out.CacheClient, delay int64) ([]model.AggregatedPrice, int64) {
 	ctx := context.Background()
 	var recentKeys []string
 	var cursor uint64 = 0
 	maxIterations := 1000
 	iteration := 0
-	// возможно стоит передавать delay из main?
-	from := time.Now().UnixMilli() - 60_001
+
+	from := time.Now().Add(-time.Duration(delay*1000) * time.Millisecond).UnixMilli()
 	to := time.Now().UnixMilli()
 
 	for {
@@ -94,7 +92,6 @@ func GetAllPrices(cache out.CacheClient, marketService *service.MarketService) (
 					log.Printf("Ошибка получения значения для ключа %s: %v", key, err)
 					continue
 				}
-				
 
 				// Добавляем найденный ключ и его значение в результат
 				recentKeys = append(recentKeys, fmt.Sprintf("%s: %s", key, value))

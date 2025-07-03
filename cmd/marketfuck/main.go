@@ -54,7 +54,7 @@ func main() {
 	repo := postgres.NewPriceRepository(db)
 	marketService := service.NewMarketService(repo)
 
-	server := http.NewServer("8081", db, logger)
+	server := http.NewServer("8081", db, logger, redisClient)
 	logger.Info("[4/4] Time to run server!")
 	go server.RunServer()
 
@@ -68,7 +68,7 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			redisData, threshold := usecase.GetAllPrices(redisClient, marketService)
+			redisData, threshold := usecase.GetAllPrices(redisClient, delay)
 			// fmt.Println(redisData)
 
 			if len(defRedisData) == 0 {

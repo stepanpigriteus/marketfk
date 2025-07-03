@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"marketfuck/internal/application/port"
 	"marketfuck/internal/application/port/in"
+	"marketfuck/internal/domain/model"
+	"marketfuck/pkg/utils"
 	"net/http"
 	"strings"
 	"time"
@@ -85,7 +87,7 @@ func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *h
 	h.logger.Info(">>> GetHighestPriceInPeriod handler called")
 	ctx := r.Context()
 	w.Header().Set("Content-Type", "application/json")
-
+	var highestPriceInPeriod model.AggregatedPrice
 	if ctx == nil {
 		http.Error(w, `{"error":"invalid context"}`, http.StatusBadRequest)
 		return
@@ -98,14 +100,15 @@ func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *h
 	}
 
 	symbol := parts[3]
-	if symbol == "" {
+	formSymb, err := utils.PairNameValidFormatter(symbol)
+	if err != nil {
 		http.Error(w, "invalid symbol in path", http.StatusBadRequest)
 		return
 	}
 
 	queryParams := r.URL.Query()
 	periodStr := queryParams.Get("period")
-
+	h.logger.Info("Processing request", "symbol", formSymb, "period", periodStr)
 	if periodStr == "" {
 		http.Error(w, `{"error":"missing period query parameter"}`, http.StatusBadRequest)
 		return
@@ -117,9 +120,16 @@ func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *h
 		return
 	}
 
-	highestPriceInPeriod, err := h.priceService.GetHighestPriceInPeriod(ctx, symbol, period)
+	// дописать забор данных из кеша в случае слишком короткого периода
+	if period < time.Minute {
+		highestPriceInPeriod, err = h.priceService.GetHighestPriceFromCache(ctx, formSymb, period)
+	} else {
+		highestPriceInPeriod, err = h.priceService.GetHighestPriceInPeriod(ctx, formSymb, period)
+	}
+
 	if err != nil {
-		h.logger.Error("Incorrect GetAveragePrice result")
+		h.logger.Error("Incorrect GetHightPriceFromPeriod result")
+		return
 	}
 
 	jsonResponse, err := json.Marshal(highestPriceInPeriod)

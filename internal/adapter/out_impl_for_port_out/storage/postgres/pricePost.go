@@ -23,6 +23,7 @@ func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.Aggregat
 		return nil
 	}
 
+
 	query := `INSERT INTO aggregated_prices (pair_name, exchange, timestamp, average_price, min_price, max_price) VALUES `
 	var args []interface{}
 	var valueStrings []string

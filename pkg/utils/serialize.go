@@ -14,7 +14,6 @@ func AggregatePricesByMinute(prices []string) ([]model.AggregatedPrice, error) {
 	grouped := make(map[string][]model.Price)
 
 	for _, priceStr := range prices {
-
 		parts := strings.SplitN(priceStr, ":", 4)
 		if len(parts) != 4 {
 			return nil, fmt.Errorf("неверный формат строки: %s", priceStr)
@@ -38,8 +37,8 @@ func AggregatePricesByMinute(prices []string) ([]model.AggregatedPrice, error) {
 			continue
 		}
 
-		minute := timestamp / 60000 * 60000
-		groupKey := fmt.Sprintf("%s:%s:%d", pairName, exchange, minute)
+		// minute := timestamp / 60000 * 60000
+		groupKey := fmt.Sprintf("%s:%s:%d", pairName, exchange, timestamp)
 
 		grouped[groupKey] = append(grouped[groupKey], model.Price{
 			PairName: pairName,
@@ -47,40 +46,53 @@ func AggregatePricesByMinute(prices []string) ([]model.AggregatedPrice, error) {
 			TSR:      timestamp,
 			Price:    priceData.Price,
 		})
+		// log.Printf("Добавлена цена: Pair=%s, Exchange=%s, Timestamp=%d, Price=%.2f", pairName, exchange, timestamp, priceData.Price)
 	}
 
 	var results []model.AggregatedPrice
 	for groupKey, prices := range grouped {
-
 		parts := strings.Split(groupKey, ":")
 		pair, exchange := parts[0], parts[1]
 		minuteTs, _ := strconv.ParseInt(parts[2], 10, 64)
 
 		var sum, min, max float64
-		for i, p := range prices {
-			if i == 0 {
-				min, max = p.Price, p.Price
-			} else {
-				if p.Price < min {
-					min = p.Price
+		count := len(prices)
+
+		// log.Printf("Обработка группы: %s, Количество цен: %d", groupKey, count)
+
+		if count > 0 {
+			min = prices[0].Price
+			max = prices[0].Price
+			sum = prices[0].Price
+
+			// log.Printf("Начальные значения: min=%.2f, max=%.2f, sum=%.2f", min, max, sum)
+
+			for i := 1; i < count; i++ {
+				price := prices[i].Price
+				sum += price
+				if price < min {
+					min = price
 				}
-				if p.Price > max {
-					max = p.Price
+				if price > max {
+					max = price
 				}
+				// log.Printf("Цена %d: %.2f, min=%.2f, max=%.2f, sum=%.2f", i, price, min, max, sum)
 			}
-			sum += p.Price
+
+			avg := sum / float64(count)
+
+			results = append(results, model.AggregatedPrice{
+				PairName:     pair,
+				Exchange:     exchange,
+				Timestamp:    time.UnixMilli(minuteTs),
+				AveragePrice: avg,
+				MinPrice:     min,
+				MaxPrice:     max,
+			})
+			// log.Printf("Результат для группы %s: avg=%.2f, min=%.2f, max=%.2f", groupKey, avg, min, max)
+		} else {
+			// log.Printf("Пустая группа: %s", groupKey)
 		}
-
-		avg := sum / float64(len(prices))
-
-		results = append(results, model.AggregatedPrice{
-			PairName:     pair,
-			Exchange:     exchange,
-			Timestamp:    time.UnixMilli(minuteTs),
-			AveragePrice: avg,
-			MinPrice:     min,
-			MaxPrice:     max,
-		})
 	}
 
 	return results, nil

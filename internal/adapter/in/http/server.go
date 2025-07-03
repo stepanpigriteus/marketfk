@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"marketfuck/internal/adapter/in/http/handler"
 	"marketfuck/internal/adapter/in/http/router"
+	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
 	"marketfuck/internal/adapter/out_impl_for_port_out/storage/postgres"
 	"marketfuck/internal/application/port"
 	"marketfuck/internal/application/port/in"
@@ -15,24 +16,26 @@ import (
 )
 
 type server struct {
-	port     string
-	db       *sql.DB
-	logger   port.Logger
-	services *in.AllServices
+	port        string
+	db          *sql.DB
+	logger      port.Logger
+	services    *in.AllServices
+	redisClient *redis.RedisCache
 }
 
-func NewServer(port string, db *sql.DB, logger port.Logger) *server {
+func NewServer(port string, db *sql.DB, logger port.Logger, redisClient *redis.RedisCache) *server {
 	priceRepo := postgres.NewPriceRepository(db)
-	priceService := usecase.NewPriceService(*priceRepo)
+	priceService := usecase.NewPriceService(*priceRepo, redisClient)
 	services := &in.AllServices{
 		PriceService: priceService,
 	}
 
 	return &server{
-		port:     port,
-		db:       db,
-		logger:   logger,
-		services: services,
+		port:        port,
+		db:          db,
+		logger:      logger,
+		services:    services,
+		redisClient: redisClient,
 	}
 }
 
