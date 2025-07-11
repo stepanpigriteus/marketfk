@@ -83,6 +83,38 @@ func (h *PriceHandler) HandleGetLatestPriceByExchange(w http.ResponseWriter, r *
 	w.Write(jsonResponse)
 }
 
+func (h *PriceHandler) HandleGetHighestPrice(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info((">>> GetHighestPrice handler called"))
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "application/json")
+	var highestPrice model.AggregatedPrice
+
+	if ctx == nil {
+		http.Error(w, `{"error":"invalid context"}`, http.StatusBadRequest)
+		return
+	}
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	pairName := parts[3]
+	highestPrice, err := h.priceService.GetHighestPrice(ctx, pairName)
+	if err != nil {
+		h.logger.Error("Incorrect GetAveragePrice result")
+	}
+	jsonResponse, err := json.Marshal(highestPrice)
+	if err != nil {
+		http.Error(w, `{"error": "failed to serialize response"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
+}
+
 func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(">>> GetHighestPriceInPeriod handler called")
 	ctx := r.Context()
@@ -110,27 +142,50 @@ func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *h
 	periodStr := queryParams.Get("period")
 	h.logger.Info("Processing request", "symbol", formSymb, "period", periodStr)
 	if periodStr == "" {
-		http.Error(w, `{"error":"missing period query parameter"}`, http.StatusBadRequest)
-		return
-	}
-
-	period, err := time.ParseDuration(periodStr)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid period: %s"}`, err), http.StatusBadRequest)
-		return
-	}
-
-	// дописать забор данных из кеша в случае слишком короткого периода
-	if period < time.Minute {
-		highestPriceInPeriod, err = h.priceService.GetHighestPriceFromCache(ctx, formSymb, period)
+		highestPriceInPeriod, err = h.priceService.GetHighestPrice(ctx, formSymb)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"invalid period: %s"}`, err), http.StatusBadRequest)
+			return
+		}
 	} else {
-		highestPriceInPeriod, err = h.priceService.GetHighestPriceInPeriod(ctx, formSymb, period)
+		period, err := time.ParseDuration(periodStr)
+	
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"invalid period: %s"}`, err), http.StatusBadRequest)
+			return
+		}
+
+		if period < time.Minute {
+			highestPriceInPeriod, err = h.priceService.GetHighestPriceFromCache(ctx, formSymb, period)
+			fmt.Println(">>>>>cashe", highestPriceInPeriod)
+		} else {
+			highestPriceInPeriod, err = h.priceService.GetHighestPriceInPeriod(ctx, formSymb, period)
+			fmt.Println(">>>>>base")
+		}
+
+		if err != nil {
+			h.logger.Error("Incorrect GetHightPriceFromPeriod result")
+			return
+		}
 	}
 
-	if err != nil {
-		h.logger.Error("Incorrect GetHightPriceFromPeriod result")
-		return
-	}
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	jsonResponse, err := json.Marshal(highestPriceInPeriod)
 	if err != nil {

@@ -39,3 +39,7 @@ func (s *MarketService) GetLatestPrice(ctx context.Context, pairName string) (mo
 func (s *MarketService) GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
 	return s.aggregatedRepo.GetHighestPriceInPeriod(ctx, pairName, period)
 }
+
+func (s *MarketService) GetHighestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) {
+	return s.aggregatedRepo.GetHighestPrice(ctx, pairName)
+}

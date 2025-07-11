@@ -11,10 +11,12 @@ type PriceService interface {
 	GetHighestPriceFromCache(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error)
 
 	//+
-	GetLatestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error)                                // GET /prices/latest/{symbol}
-	GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) //
-	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error)          // GET /prices/highest/{symbol}?period={duration}
+	GetLatestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) // GET /prices/latest/{symbol}
 
+	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error)
+	GetHighestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error)
+
+	GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) //
 	//-
 
 }
