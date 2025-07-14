@@ -131,15 +131,6 @@ func (r *PriceRepository) GetHighestPrice(ctx context.Context, pairName string) 
 		price.PairName, price.Exchange, price.AveragePrice, price.Timestamp)
 
 	return price, nil
-
-}
-
-func (r *PriceRepository) GetPricesInPeriod(ctx context.Context, pairName string, duration time.Time) ([]model.AggregatedPrice, error) {
-	return nil, nil
-}
-
-func (r *PriceRepository) GetPricesInPeriodByExchange(ctx context.Context, exchangeID, pairName string, startTime, endTime time.Time) ([]model.Price, error) {
-	return nil, nil
 }
 
 func (s *PriceRepository) GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
@@ -264,7 +255,7 @@ func (r *PriceRepository) GetLovestPrice(ctx context.Context, pairName string) (
 	err := r.db.QueryRowContext(ctx, query, pairName).Scan(
 		&price.PairName,
 		&price.Exchange,
-		&price.MaxPrice,
+		&price.MinPrice,
 		&price.Timestamp,
 	)
 	if err != nil {
@@ -278,5 +269,228 @@ func (r *PriceRepository) GetLovestPrice(ctx context.Context, pairName string) (
 		price.PairName, price.Exchange, price.AveragePrice, price.Timestamp)
 
 	return price, nil
+}
 
+func (s *PriceRepository) GetLowestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	lastTimestamp, err := s.GetLastRecordTime(ctx, pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+
+	endTime := lastTimestamp
+	startTime := endTime.Add(-period)
+	query := `
+	SELECT pair_name, exchange, MIN(min_price) as min_price, timestamp
+	FROM aggregated_prices
+	WHERE pair_name = $1 AND timestamp >= $2 AND timestamp <= $3
+	GROUP BY pair_name, exchange, timestamp
+	ORDER BY min_price ASC
+	LIMIT 1;
+`
+
+	err = s.db.QueryRowContext(ctx, query, pairName, startTime, endTime).Scan(
+		&price.PairName,
+		&price.Exchange,
+		&price.MinPrice,
+		&price.Timestamp,
+	)
+	if err != nil {
+		return model.AggregatedPrice{}, fmt.Errorf("could not retrieve highest price: %v", err)
+	}
+	fmt.Println(price)
+	return price, nil
+}
+
+func (r *PriceRepository) GetLowestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	query := `
+		SELECT pair_name, exchange, min_price, timestamp
+		FROM aggregated_prices
+		WHERE exchange = $1 AND pair_name = $2
+		ORDER BY min_price ASC
+		LIMIT 1;
+	`
+	err := r.db.QueryRowContext(ctx, query, exchangeID, pairName).Scan(
+		&price.PairName,
+		&price.Exchange,
+		&price.MinPrice,
+		&price.Timestamp,
+	)
+
+	fmt.Println(err, price)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("no data found for pair %s", pairName)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("failed to fetch latest price: %v", err)
+	}
+
+	fmt.Printf("Fetched aggregated price: PairName=%s, Exchange=%s, AveragePrice=%f, Timestamp=%s\n",
+		price.PairName, price.Exchange, price.AveragePrice, price.Timestamp)
+
+	return price, nil
+}
+
+func (r *PriceRepository) GetLowestPriceByExchangeInPeriod(ctx context.Context, exchangeID, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	lastTimestamp, err := r.GetLastRecordTime(ctx, pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+	endTime := lastTimestamp
+	startTime := endTime.Add(-period)
+
+	query := `
+	SELECT pair_name, exchange, MIN(min_price) as min_price, timestamp
+	FROM aggregated_prices
+	WHERE pair_name = $1 AND timestamp >= $2 AND timestamp <= $3 AND exchange =$4
+	GROUP BY pair_name, exchange, timestamp
+	ORDER BY min_price ASC
+	LIMIT 1;
+	`
+	err = r.db.QueryRowContext(ctx, query, pairName, startTime, endTime, exchangeID).Scan(
+		&price.PairName,
+		&price.Exchange,
+		&price.MinPrice,
+		&price.Timestamp,
+	)
+	if err != nil {
+		return model.AggregatedPrice{}, fmt.Errorf("could not retrieve highest price: %v", err)
+	}
+	fmt.Println(price)
+	return price, nil
+}
+
+func (r *PriceRepository) GetAveragePrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+
+	query := `
+		SELECT AVG(average_price)
+		FROM aggregated_prices
+		WHERE pair_name = $1;
+	`
+
+	err := r.db.QueryRowContext(ctx, query, pairName).Scan(&price.AveragePrice)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("no data found for pair %s", pairName)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("failed to compute average: %v", err)
+	}
+
+	price.PairName = pairName
+	price.Timestamp = time.Now() // или возьми последний timestamp, если нужно
+
+	fmt.Printf("Computed average price: PairName=%s, AveragePrice=%f\n",
+		price.PairName, price.AveragePrice)
+
+	return price, nil
+}
+
+func (s *PriceRepository) GetAveragePriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	lastTimestamp, err := s.GetLastRecordTime(ctx, pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+
+	endTime := lastTimestamp
+	startTime := endTime.Add(-period)
+
+	query := `
+	SELECT AVG(average_price)
+	FROM aggregated_prices
+	WHERE pair_name = $1 AND timestamp BETWEEN $2 AND $3;
+	`
+
+	err = s.db.QueryRowContext(ctx, query, pairName, startTime, endTime).Scan(&price.AveragePrice)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("no data found for pair %s", pairName)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("failed to compute average: %v", err)
+	}
+
+	price.PairName = pairName
+	price.Timestamp = endTime
+
+	fmt.Printf("Average price for %s in last %s = %f\n", pairName, period.String(), price.AveragePrice)
+
+	return price, nil
+}
+
+func (r *PriceRepository) GetAveragePriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
+	query := `
+		SELECT average_price
+		FROM aggregated_prices
+		WHERE exchange = $1 AND pair_name = $2;
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, exchangeID, pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, fmt.Errorf("ошибка запроса к БД: %v", err)
+	}
+	defer rows.Close()
+
+	var sum float64
+	var count int
+
+	for rows.Next() {
+		var avg float64
+		if err := rows.Scan(&avg); err != nil {
+			return model.AggregatedPrice{}, fmt.Errorf("ошибка чтения строки: %v", err)
+		}
+		sum += avg
+		count++
+	}
+
+	if err := rows.Err(); err != nil {
+		return model.AggregatedPrice{}, fmt.Errorf("ошибка обхода строк: %v", err)
+	}
+
+	if count == 0 {
+		return model.AggregatedPrice{}, fmt.Errorf("нет данных для пары %s на бирже %s", pairName, exchangeID)
+	}
+
+	average := sum / float64(count)
+
+	return model.AggregatedPrice{
+		PairName:     pairName,
+		Exchange:     exchangeID,
+		AveragePrice: average,
+	}, nil
+}
+
+func (r *PriceRepository) GetAveragePriceByExchangeInPeriod(ctx context.Context, exchangeID, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+
+	lastTimestamp, err := r.GetLastRecordTime(ctx, pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+
+	endTime := lastTimestamp
+	startTime := endTime.Add(-period)
+
+	query := `
+		SELECT AVG(average_price)
+		FROM aggregated_prices
+		WHERE pair_name = $1 AND exchange = $2 AND timestamp BETWEEN $3 AND $4;
+	`
+
+	err = r.db.QueryRowContext(ctx, query, pairName, exchangeID, startTime, endTime).Scan(&price.AveragePrice)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("нет данных для %s на %s", pairName, exchangeID)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("ошибка выборки: %v", err)
+	}
+
+	price.PairName = pairName
+	price.Exchange = exchangeID
+	price.Timestamp = endTime
+
+	fmt.Printf("Средняя цена %s на %s за период %s: %f\n", pairName, exchangeID, period.String(), price.AveragePrice)
+	return price, nil
 }

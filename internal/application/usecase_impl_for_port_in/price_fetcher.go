@@ -100,18 +100,8 @@ func (s *priceService) GetHighestPriceByExchangeInPeriod(ctx context.Context, ex
 	return price, nil
 }
 
-func (s *priceService) GetAveragePrice(ctx context.Context, pairName string, period time.Duration) (float64, error) {
-	var avg float64
-	return avg, nil
-}
-
-func (s *priceService) GetAveragePriceByExchange(ctx context.Context, exchangeID, pairName string, period time.Duration) (float64, error) {
-	var avg float64
-	return avg, nil
-}
-
 // это допик для кеша
-func (s *priceService) GetHighestPriceFromCache(ctx context.Context, pairName string, period time.Duration, exchange string) (model.AggregatedPrice, error) {
+func (s *priceService) GetHighestPriceFromCache(ctx context.Context, pairName string, period time.Duration, exchange string, flag string) (model.AggregatedPrice, error) {
 	var result model.AggregatedPrice
 	periodMs := int64(period.Milliseconds())
 	redisData, _ := GetAllPrices(s.redisClient, periodMs)
@@ -121,7 +111,7 @@ func (s *priceService) GetHighestPriceFromCache(ctx context.Context, pairName st
 
 	var latestTime time.Time
 	totalPairRecords := 0
-
+	fmt.Println(redisData)
 	for _, price := range redisData {
 		if price.PairName == pairName {
 			totalPairRecords++
@@ -137,22 +127,31 @@ func (s *priceService) GetHighestPriceFromCache(ctx context.Context, pairName st
 
 	cutoff := latestTime.Add(-period)
 
-	// fmt.Printf("Total %s records: %d\n", pairName, totalPairRecords)
-	// fmt.Printf("Latest record time: %v\n", latestTime)
-	// fmt.Printf("Cutoff time: %v (period: %v)\n", cutoff, period)
-	// fmt.Printf("Looking for data between: %v and %v\n", cutoff, latestTime)
-
-	result.MaxPrice = -1
 	validCount := 0
+	var sum float64
+	var avgCount int
+	var initialized bool
 
 	for _, price := range redisData {
 		if price.PairName == pairName && (exchange == "" || price.Exchange == exchange) {
-
 			if !price.Timestamp.Before(cutoff) && !price.Timestamp.After(latestTime) {
 				validCount++
 
-				if price.MaxPrice > result.MaxPrice {
-					result = price
+				switch flag {
+				case "max":
+					if !initialized || price.MaxPrice > result.MaxPrice {
+						result = price
+						initialized = true
+					}
+				case "min":
+					if !initialized || price.MinPrice < result.MinPrice {
+						result = price
+						initialized = true
+					}
+
+				case "avg":
+					sum += price.AveragePrice
+					avgCount++
 				}
 			}
 		}
@@ -160,7 +159,17 @@ func (s *priceService) GetHighestPriceFromCache(ctx context.Context, pairName st
 
 	fmt.Printf("Found %d valid records for %s\n", validCount, pairName)
 
-	if result.MaxPrice == -1 {
+	if flag == "avg" {
+		if avgCount == 0 {
+			return model.AggregatedPrice{}, fmt.Errorf("не найдено цен в кеше за указанный период")
+		}
+		result = model.AggregatedPrice{
+			PairName:  pairName,
+			Exchange:  exchange,
+			MaxPrice:  sum / float64(avgCount),
+			Timestamp: latestTime,
+		}
+	} else if !initialized {
 		return model.AggregatedPrice{}, fmt.Errorf("не найдено цен в кеше за указанный период")
 	}
 
@@ -179,5 +188,89 @@ func (s *priceService) GetLowestPrice(ctx context.Context, pairName string) (mod
 		fmt.Printf("Error in GetHighestPrice: %v\n", err)
 		return model.AggregatedPrice{}, err
 	}
+	return price, nil
+}
+
+func (s *priceService) GetLowestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	name, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+
+	price, err = s.priceRepo.GetLowestPriceInPeriod(ctx, name, period)
+	if err != nil {
+		fmt.Printf("Error in GetHighestPriceInPeriod: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
+	return price, nil
+}
+
+func (s *priceService) GetLowestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	name, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+	price, err = s.priceRepo.GetLowestPriceByExchange(ctx, exchangeID, name)
+	return price, nil
+}
+
+func (s *priceService) GetLowestPriceByExchangeInPeriod(ctx context.Context, exchangeID, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	name, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+	price, err = s.priceRepo.GetLowestPriceByExchangeInPeriod(ctx, exchangeID, name, period)
+	return price, nil
+}
+
+func (s *priceService) GetAveragePrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	name, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+	price, err = s.priceRepo.GetAveragePrice(ctx, name)
+	if err != nil {
+		fmt.Printf("Error in GetHighestPrice: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
+	return price, nil
+}
+
+func (s *priceService) GetAveragePriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	name, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+
+	price, err = s.priceRepo.GetAveragePriceInPeriod(ctx, name, period)
+	if err != nil {
+		fmt.Printf("Error in GetHighestPriceInPeriod: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
+	return price, nil
+}
+
+func (s *priceService) GetAveragePriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	name, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+	price, err = s.priceRepo.GetAveragePriceByExchange(ctx, exchangeID, name)
+	return price, nil
+}
+
+func (s *priceService) GetAveragePriceByExchangeInPeriod(ctx context.Context, exchangeID, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	name, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+	price, err = s.priceRepo.GetAveragePriceByExchangeInPeriod(ctx, exchangeID, name, period)
 	return price, nil
 }

@@ -122,13 +122,13 @@ GET /prices/highest/{exchange}/{symbol}– Получите самую высо�
 
 <!-- GET /prices/lowest/{symbol}– Получите самую низкую цену за определенный период. -->
 
-GET /prices/lowest/{exchange}/{symbol}– Получите самую низкую цену за определенный период от конкретной биржи.
+<!-- GET /prices/lowest/{exchange}/{symbol}– Получите самую низкую цену за определенный период от конкретной биржи. -->
 
-GET /prices/lowest/{symbol}?period={duration}– Получите самую низкую цену в течение последнего {продления}.
+<!-- GET /prices/lowest/{symbol}?period={duration}– Получите самую низкую цену в течение последнего {продления}. -->
 
-GET /prices/lowest/{exchange}/{symbol}?period={duration} – Get the lowest price within the last {duration} from a specific exchange.
+<!-- GET /prices/lowest/{exchange}/{symbol}?period={duration} – Get the lowest price within the last {duration} from a specific exchange. -->
 
-GET /prices/average/{symbol}– Получите среднюю цену за период.
+<!-- GET /prices/average/{symbol}– Получите среднюю цену за период. -->
 
 GET /prices/average/{exchange}/{symbol}– Получите среднюю цену за определенный период с конкретной биржи.
 
