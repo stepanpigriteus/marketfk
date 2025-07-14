@@ -113,14 +113,14 @@ GET /prices/latest/{symbol}– Получите последнюю цену за
 GET /prices/latest/{exchange}/{symbol}– Получите последнюю цену за данный символ от конкретной биржи. +++ -->
 <!-- 
 GET /prices/highest/{symbol}– Получите самую высокую цену за определенный период. +++ -->
+<!-- 
+GET /prices/highest/{exchange}/{symbol}– Получите самую высокую цену за определенный период от конкретной биржи.  -->
 
-GET /prices/highest/{exchange}/{symbol}– Получите самую высокую цену за определенный период от конкретной биржи. ++++ 
+<!-- GET /prices/highest/{symbol}?period={duration} – Get the highest price within the last {duration} (e.g., the last 1s,  3s, 5s, 10s, 30s, 1m, 3m, 5m). -->
 
-GET /prices/highest/{symbol}?period={duration} – Get the highest price within the last {duration} (e.g., the last 1s,  3s, 5s, 10s, 30s, 1m, 3m, 5m).
+<!-- GET /prices/highest/{exchange}/{symbol}?period={duration} – Get the highest price within the last {duration} from a specific exchange. -->
 
-GET /prices/highest/{exchange}/{symbol}?period={duration} – Get the highest price within the last {duration} from a specific exchange.
-
-GET /prices/lowest/{symbol}– Получите самую низкую цену за определенный период.
+<!-- GET /prices/lowest/{symbol}– Получите самую низкую цену за определенный период. -->
 
 GET /prices/lowest/{exchange}/{symbol}– Получите самую низкую цену за определенный период от конкретной биржи.
 
@@ -134,11 +134,13 @@ GET /prices/average/{exchange}/{symbol}– Получите среднюю це�
 
 GET /prices/average/{exchange}/{symbol}?period={duration} – Get the average price within the last {duration} from a specific exchange
 
+
 API режима данных
 
 POST /mode/test – Switch to Test Mode (use generated data).
 
 POST /mode/live – Switch to Live Mode (fetch data from provided programs).
+
 
 Состояние системы
 

@@ -118,6 +118,7 @@ func (h *PriceHandler) HandleGetHighestPrice(w http.ResponseWriter, r *http.Requ
 func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(">>> GetHighestPriceInPeriod handler called")
 	ctx := r.Context()
+	exchange := ""
 	w.Header().Set("Content-Type", "application/json")
 	var highestPriceInPeriod model.AggregatedPrice
 	if ctx == nil {
@@ -149,14 +150,14 @@ func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *h
 		}
 	} else {
 		period, err := time.ParseDuration(periodStr)
-	
+
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error":"invalid period: %s"}`, err), http.StatusBadRequest)
 			return
 		}
 
 		if period < time.Minute {
-			highestPriceInPeriod, err = h.priceService.GetHighestPriceFromCache(ctx, formSymb, period)
+			highestPriceInPeriod, err = h.priceService.GetHighestPriceFromCache(ctx, formSymb, period, exchange)
 			fmt.Println(">>>>>cashe", highestPriceInPeriod)
 		} else {
 			highestPriceInPeriod, err = h.priceService.GetHighestPriceInPeriod(ctx, formSymb, period)
@@ -169,25 +170,111 @@ func (h *PriceHandler) HandleGetHighestPriceInPeriod(w http.ResponseWriter, r *h
 		}
 	}
 
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	jsonResponse, err := json.Marshal(highestPriceInPeriod)
+	if err != nil {
+		http.Error(w, `{"error": "failed to serialize response"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
+}
+
+func (h *PriceHandler) HandleGetHighestPriceByExchange(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info(">>> GetHighestPriceByExangeInPeriod handler called")
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "application/json")
+
+	if ctx == nil {
+		http.Error(w, `{"error":"invalid context"}`, http.StatusBadRequest)
+		return
+	}
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 4 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+	pairName := parts[4]
+	exchangeID := parts[3]
+	formSymb, err := utils.PairNameValidFormatter(pairName)
+	if err != nil {
+		http.Error(w, "invalid symbol in path", http.StatusBadRequest)
+		return
+	}
+
+	if exchangeID == "" || pairName == "" {
+		http.Error(w, "invalid exchange or symbol", http.StatusBadRequest)
+		return
+	}
+	var latestPriceByEx model.AggregatedPrice
+	queryParams := r.URL.Query()
+	periodStr := queryParams.Get("period")
+	h.logger.Info("Processing request", "symbol", formSymb, "period", periodStr)
+
+	if periodStr == "" {
+		latestPriceByEx, err = h.priceService.GetHighestPriceByExchange(ctx, exchangeID, formSymb)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"invalid period: %s"}`, err), http.StatusBadRequest)
+			return
+		}
+	} else {
+		period, err := time.ParseDuration(periodStr)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"invalid period: %s"}`, err), http.StatusBadRequest)
+			return
+		}
+
+		if period < time.Minute {
+			latestPriceByEx, err = h.priceService.GetHighestPriceFromCache(ctx, formSymb, period, exchangeID)
+			fmt.Println(">>>>>cashe", latestPriceByEx)
+		} else {
+			latestPriceByEx, err = h.priceService.GetHighestPriceByExchangeInPeriod(ctx, exchangeID, formSymb, period)
+			fmt.Println(">>>>>base")
+		}
+
+		if err != nil {
+			h.logger.Error("Incorrect GetHightPriceFromPeriod result")
+			return
+		}
+	}
+
+	if err != nil {
+		h.logger.Error("Incorrect GetAveragePrice result")
+	}
+	jsonResponse, err := json.Marshal(latestPriceByEx)
+	if err != nil {
+		http.Error(w, `{"error": "failed to serialize response"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
+}
+
+func (h *PriceHandler) HandleGetLowestPrice(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info((">>> GetHighestPrice handler called"))
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "application/json")
+	var lovestPrice model.AggregatedPrice
+
+	if ctx == nil {
+		http.Error(w, `{"error":"invalid context"}`, http.StatusBadRequest)
+		return
+	}
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	pairName := parts[3]
+	lovestPrice, err := h.priceService.GetLowestPrice(ctx, pairName)
+	if err != nil {
+		h.logger.Error("Incorrect GetAveragePrice result")
+	}
+	jsonResponse, err := json.Marshal(lovestPrice)
 	if err != nil {
 		http.Error(w, `{"error": "failed to serialize response"}`, http.StatusInternalServerError)
 		return

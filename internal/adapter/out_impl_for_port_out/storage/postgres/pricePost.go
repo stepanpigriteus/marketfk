@@ -108,7 +108,7 @@ func (s *PriceRepository) GetLatestPriceByExchange(ctx context.Context, exchange
 func (r *PriceRepository) GetHighestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) {
 	var price model.AggregatedPrice
 	query := `
-		SELECT pair_name, exchange, average_price, timestamp
+		SELECT pair_name, exchange, max_price, timestamp
 		FROM aggregated_prices
 		WHERE pair_name = $1
 		ORDER BY average_price DESC
@@ -117,7 +117,7 @@ func (r *PriceRepository) GetHighestPrice(ctx context.Context, pairName string) 
 	err := r.db.QueryRowContext(ctx, query, pairName).Scan(
 		&price.PairName,
 		&price.Exchange,
-		&price.AveragePrice,
+		&price.MaxPrice,
 		&price.Timestamp,
 	)
 	if err != nil {
@@ -190,4 +190,93 @@ func (s *PriceRepository) GetLastRecordTime(ctx context.Context, pairName string
 	}
 
 	return lastTimestamp, nil
+}
+
+func (r *PriceRepository) GetHighestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	query := `
+		SELECT pair_name, exchange, max_price, timestamp
+		FROM aggregated_prices
+		WHERE exchange = $1 AND pair_name = $2
+		ORDER BY max_price DESC
+		LIMIT 1;
+	`
+	err := r.db.QueryRowContext(ctx, query, exchangeID, pairName).Scan(
+		&price.PairName,
+		&price.Exchange,
+		&price.MaxPrice,
+		&price.Timestamp,
+	)
+
+	fmt.Println(err, price)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("no data found for pair %s", pairName)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("failed to fetch latest price: %v", err)
+	}
+
+	fmt.Printf("Fetched aggregated price: PairName=%s, Exchange=%s, AveragePrice=%f, Timestamp=%s\n",
+		price.PairName, price.Exchange, price.AveragePrice, price.Timestamp)
+
+	return price, nil
+}
+
+func (r *PriceRepository) GetHighestPriceByExchangeInPeriod(ctx context.Context, exchangeID, pairName string, period time.Duration) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	lastTimestamp, err := r.GetLastRecordTime(ctx, pairName)
+	if err != nil {
+		return model.AggregatedPrice{}, err
+	}
+	endTime := lastTimestamp
+	startTime := endTime.Add(-period)
+
+	query := `
+	SELECT pair_name, exchange, MAX(max_price) as max_price, timestamp
+	FROM aggregated_prices
+	WHERE pair_name = $1 AND timestamp >= $2 AND timestamp <= $3 AND exchange =$4
+	GROUP BY pair_name, exchange, timestamp
+	ORDER BY max_price DESC
+	LIMIT 1;
+	`
+	err = r.db.QueryRowContext(ctx, query, pairName, startTime, endTime, exchangeID).Scan(
+		&price.PairName,
+		&price.Exchange,
+		&price.MaxPrice,
+		&price.Timestamp,
+	)
+	if err != nil {
+		return model.AggregatedPrice{}, fmt.Errorf("could not retrieve highest price: %v", err)
+	}
+	fmt.Println(price)
+	return price, nil
+}
+
+func (r *PriceRepository) GetLovestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) {
+	var price model.AggregatedPrice
+	query := `
+		SELECT pair_name, exchange, min_price, timestamp
+		FROM aggregated_prices
+		WHERE pair_name = $1
+		ORDER BY average_price ASC
+		LIMIT 1;
+	`
+	err := r.db.QueryRowContext(ctx, query, pairName).Scan(
+		&price.PairName,
+		&price.Exchange,
+		&price.MaxPrice,
+		&price.Timestamp,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.AggregatedPrice{}, fmt.Errorf("no data found for pair %s", pairName)
+		}
+		return model.AggregatedPrice{}, fmt.Errorf("failed to fetch latest price: %v", err)
+	}
+
+	fmt.Printf("Fetched aggregated price: PairName=%s, Exchange=%s, AveragePrice=%f, Timestamp=%s\n",
+		price.PairName, price.Exchange, price.AveragePrice, price.Timestamp)
+
+	return price, nil
+
 }

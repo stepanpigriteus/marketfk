@@ -8,15 +8,18 @@ import (
 
 type PriceService interface {
 	// next
-	GetHighestPriceFromCache(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error)
+	GetHighestPriceFromCache(ctx context.Context, pairName string, period time.Duration, exchange string) (model.AggregatedPrice, error)
 
 	//+
 	GetLatestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error) // GET /prices/latest/{symbol}
 
 	GetLatestPriceByExchange(ctx context.Context, exchangeID, pairName string) (model.AggregatedPrice, error)
 	GetHighestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error)
-
-	GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error) //
+	GetHighestPriceByExchange(ctx context.Context, exchangeID string, pairName string) (model.AggregatedPrice, error)
+	GetHighestPriceByExchangeInPeriod(ctx context.Context, exchangeID string, pairName string, period time.Duration) (model.AggregatedPrice, error)
+	GetHighestPriceInPeriod(ctx context.Context, pairName string, period time.Duration) (model.AggregatedPrice, error)
+	GetLowestPrice(ctx context.Context, pairName string) (model.AggregatedPrice, error)
+	//
 	//-
 
 }
