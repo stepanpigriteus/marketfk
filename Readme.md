@@ -130,9 +130,9 @@ GET /prices/highest/{exchange}/{symbol}– Получите самую высо�
 
 <!-- GET /prices/average/{symbol}– Получите среднюю цену за период. -->
 
-GET /prices/average/{exchange}/{symbol}– Получите среднюю цену за определенный период с конкретной биржи.
+<!-- GET /prices/average/{exchange}/{symbol}– Получите среднюю цену за определенный период с конкретной биржи.
 
-GET /prices/average/{exchange}/{symbol}?period={duration} – Get the average price within the last {duration} from a specific exchange
+GET /prices/average/{exchange}/{symbol}?period={duration} – Get the average price within the last {duration} from a specific exchange -->
 
 
 API режима данных

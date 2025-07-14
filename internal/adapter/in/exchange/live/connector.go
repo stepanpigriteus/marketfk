@@ -46,7 +46,6 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 				break
 			}
 		}
-		// cancel() // Закрываем контекст чтения
 
 		log.Printf("Соединение с %s разорвано, попытка переподключения", address)
 		if !tryReconnect(ctx, client, address, maxRetries, maxBackoff) {
