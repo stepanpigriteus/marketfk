@@ -24,6 +24,8 @@ func RegisterRoutes(mux *http.ServeMux, handlers *handler.AllHandlers) {
 		{Method: http.MethodGet, Path: "/prices/lowest/{exchange}/{symbol}", Handler: handlers.Price.HandleGetLowestPriceByExchange, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
 		{Method: http.MethodGet, Path: "/prices/average/{symbol}", Handler: handlers.Price.HandleGetAveragePrice, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
 		{Method: http.MethodGet, Path: "/prices/average/{exchange}/{symbol}", Handler: handlers.Price.HandleGetAveragePriceByExchange, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
+		{Method: http.MethodGet, Path: "/mode/test", Handler: handlers.Mode.HandleSwitchToTestMode, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
+		{Method: http.MethodGet, Path: "/mode/live", Handler: handlers.Mode.HandleSwitchToLiveMode, Middlewares: []func(http.Handler) http.Handler{middleware.LoggerMiddleware}},
 	}
 
 	for _, route := range routes {

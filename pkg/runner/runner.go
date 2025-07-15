@@ -52,7 +52,7 @@ func InitDependencies(cfg *config.Config, logger port.Logger) (*sql.DB, *redis.R
 }
 
 func RunPriceSaver(ctx context.Context, redisClient *redis.RedisCache, marketService *service.MarketService, logger port.Logger) {
-	var delay int64 = 60
+	var delay int64 = 10
 	ticker := time.NewTicker(time.Duration(delay) * time.Second)
 	defer ticker.Stop()
 	var defRedisData []model.AggregatedPrice
@@ -64,7 +64,7 @@ func RunPriceSaver(ctx context.Context, redisClient *redis.RedisCache, marketSer
 			return
 		case <-ticker.C:
 			redisData, threshold := usecase.GetAllPrices(redisClient, delay)
-
+			// fmt.Println(redisData)
 			if len(defRedisData) == 0 {
 				if err := marketService.SavePrice(ctx, redisData); err != nil {
 					defRedisData = append(defRedisData, redisData...)

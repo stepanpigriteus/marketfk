@@ -29,3 +29,4 @@ docker-compose up -d
 - дописать валидацию exchange name до Exchange1
 http://localhost:8081/prices/latest/SOLUSDT
 
+redis-cli KEYS *:Exchange*:*

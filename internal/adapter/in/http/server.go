@@ -26,11 +26,13 @@ type server struct {
 	srv         *http.Server
 }
 
-func NewServer(port string, db *sql.DB, logger port.Logger, redisClient *redis.RedisCache) *server {
+func NewServer(port string, db *sql.DB, logger port.Logger, redisClient *redis.RedisCache, modeService in.ModeService) *server {
 	priceRepo := postgres.NewPriceRepository(db)
 	priceService := usecase.NewPriceService(*priceRepo, redisClient)
+
 	services := &in.AllServices{
 		PriceService: priceService,
+		ModeService:  modeService,
 	}
 
 	return &server{

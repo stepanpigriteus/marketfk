@@ -87,6 +87,10 @@ func (s *priceService) GetHighestPriceByExchange(ctx context.Context, exchangeID
 		return model.AggregatedPrice{}, err
 	}
 	price, err = s.priceRepo.GetHighestPriceByExchange(ctx, exchangeID, name)
+	if err != nil {
+		fmt.Printf("Error in GetHighestPriceByExchange: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
 	return price, nil
 }
 
@@ -97,6 +101,10 @@ func (s *priceService) GetHighestPriceByExchangeInPeriod(ctx context.Context, ex
 		return model.AggregatedPrice{}, err
 	}
 	price, err = s.priceRepo.GetHighestPriceByExchangeInPeriod(ctx, exchangeID, name, period)
+	if err != nil {
+		fmt.Printf("Error in GetHighestPriceByExchangeInPeriod: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
 	return price, nil
 }
 
@@ -213,6 +221,10 @@ func (s *priceService) GetLowestPriceByExchange(ctx context.Context, exchangeID,
 		return model.AggregatedPrice{}, err
 	}
 	price, err = s.priceRepo.GetLowestPriceByExchange(ctx, exchangeID, name)
+	if err != nil {
+		fmt.Printf("Error in GetLowestPriceByExchange: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
 	return price, nil
 }
 
@@ -223,6 +235,10 @@ func (s *priceService) GetLowestPriceByExchangeInPeriod(ctx context.Context, exc
 		return model.AggregatedPrice{}, err
 	}
 	price, err = s.priceRepo.GetLowestPriceByExchangeInPeriod(ctx, exchangeID, name, period)
+	if err != nil {
+		fmt.Printf("Error in GetLowestPriceByExchangeInPeriod: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
 	return price, nil
 }
 
@@ -262,6 +278,10 @@ func (s *priceService) GetAveragePriceByExchange(ctx context.Context, exchangeID
 		return model.AggregatedPrice{}, err
 	}
 	price, err = s.priceRepo.GetAveragePriceByExchange(ctx, exchangeID, name)
+	if err != nil {
+		fmt.Printf("Error in GetAveragePriceByExchange: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
 	return price, nil
 }
 
@@ -272,5 +292,9 @@ func (s *priceService) GetAveragePriceByExchangeInPeriod(ctx context.Context, ex
 		return model.AggregatedPrice{}, err
 	}
 	price, err = s.priceRepo.GetAveragePriceByExchangeInPeriod(ctx, exchangeID, name, period)
+	if err != nil {
+		fmt.Printf("Error in GetAveragePriceByExchangeInPeriod: %v\n", err)
+		return model.AggregatedPrice{}, err
+	}
 	return price, nil
 }

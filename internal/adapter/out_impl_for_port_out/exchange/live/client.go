@@ -18,10 +18,8 @@ type LiveExchangeClient struct {
 	mu          sync.RWMutex
 
 	subscriptions map[string][]chan<- model.Price
-	subsMu        sync.RWMutex
 
 	latestPrices map[string]model.Price
-	pricesMu     sync.RWMutex
 
 	ctx    context.Context
 	cancel context.CancelFunc

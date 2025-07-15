@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"marketfuck/cmd/testgen"
 	"marketfuck/internal/adapter/in/http"
-	usecase "marketfuck/internal/application/usecase_impl_for_port_in"
+	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
+	"marketfuck/internal/domain/model"
+	"marketfuck/internal/domain/service"
 	"marketfuck/pkg/concurrency"
 	"marketfuck/pkg/config"
 	"marketfuck/pkg/logger"
 	"marketfuck/pkg/runner"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -21,14 +25,38 @@ func main() {
 	logger := logger.NewSlogAdapter()
 	logger.Info("[1/4] Reading configurations")
 	cfg := config.LoadConfig()
-	ready := make(chan struct{})
+
+	go func() {
+		testgen.StartFakeExchangeWithCtx(ctx, "50101", "exchangeTest1")
+	}()
+	go func() {
+		testgen.StartFakeExchangeWithCtx(ctx, "50102", "exchangeTest2")
+	}()
+	go func() {
+		testgen.StartFakeExchangeWithCtx(ctx, "50103", "exchangeTest3")
+	}()
+	time.Sleep(2 * time.Second)
 	sigCh := runner.SetupSignalHandler()
 
 	db, redisClient, marketService := runner.InitDependencies(cfg, logger)
 	defer db.Close()
 	defer redisClient.Close()
 
-	server := http.NewServer("8081", db, logger, redisClient)
+	aggregator := func(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string) <-chan model.Price {
+		return concurrency.GenAggr(ctx, counter, redis, ports)
+	}
+
+	modeService := service.NewModeService(redisClient, &counter, aggregator)
+
+	if err := modeService.SwitchToLiveMode(ctx); err != nil && err.Error() != "already in this mode" {
+		logger.Error("Не удалось запустить в live режиме", "error", err)
+		cancel()
+		return
+	}
+	logger.Info("Successfully switched to LiveMode")
+
+	server := http.NewServer("8081", db, logger, redisClient, modeService)
+
 	wg := &sync.WaitGroup{}
 
 	logger.Info("[4/4] Starting HTTP server")
@@ -39,22 +67,6 @@ func main() {
 			logger.Error("Ошибка запуска сервера: ", err)
 			cancel()
 		}
-	}()
-
-	go func() {
-		<-ready
-		<-sigCh
-		logger.Info("Получен сигнал завершения. Остановка...")
-		cancel()
-		server.GracefulShutdown()
-	}()
-
-	fanIn := concurrency.GenAggr(ctx, &counter, *redisClient)
-	close(ready)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		usecase.PriceAggregator(redisClient, fanIn)
 	}()
 
 	wg.Add(1)

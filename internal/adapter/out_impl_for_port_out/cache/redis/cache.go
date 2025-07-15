@@ -93,3 +93,16 @@ func (r *RedisCache) CheckConnection(ctx context.Context) (bool, error) {
 	err := r.client.Ping(ctx).Err()
 	return err == nil, err
 }
+
+func (r *RedisCache) Clear(ctx context.Context) error {
+	keys, err := r.Keys(ctx, "*")
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		if err := r.Delete(ctx, key); err != nil {
+			return err
+		}
+	}
+	return nil
+}

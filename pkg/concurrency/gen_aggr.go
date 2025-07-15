@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 )
 
-func GenAggr(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache) <-chan model.Price {
-	ports := []string{"40101", "40102", "40103"}
+func GenAggr(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string) <-chan model.Price {
+
 
 	var wg sync.WaitGroup
 	var exchangeWg sync.WaitGroup
