@@ -111,7 +111,7 @@ func (s *priceService) GetHighestPriceFromCache(ctx context.Context, pairName st
 
 	var latestTime time.Time
 	totalPairRecords := 0
-	fmt.Println(redisData)
+
 	for _, price := range redisData {
 		if price.PairName == pairName {
 			totalPairRecords++

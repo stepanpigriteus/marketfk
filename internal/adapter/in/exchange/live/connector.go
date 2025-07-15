@@ -9,10 +9,8 @@ import (
 	"time"
 )
 
-func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Price) {
+func GenConnectAndRead(ctx context.Context, port string, wg *sync.WaitGroup, output chan<- model.Price) {
 	defer wg.Done()
-
-	ctx := context.Background()
 
 	address := "exchange" + port[4:5] + ":" + port
 	exchange := model.Exchange{Name: "Exchange" + port[4:5]}
@@ -21,9 +19,16 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 	const maxBackoff = 16 * time.Second
 
 	for {
-		log.Printf("Подключение к %s", address)
+		select {
+		case <-ctx.Done():
+			log.Printf("Завершение подключения к %s по сигналу", address)
+			return
+		default:
+		}
 
+		log.Printf("Подключение к %s", address)
 		client := live.NewLiveExchangeClient(exchange, address)
+
 		err := client.Connect()
 		if err != nil {
 			log.Printf("Ошибка подключения к %s: %v", address, err)
@@ -31,19 +36,28 @@ func GenConnectAndRead(port string, wg *sync.WaitGroup, output chan<- model.Pric
 				log.Printf("Не удалось переподключиться к %s после %d попыток", address, maxRetries)
 				return
 			}
+			continue
 		}
 
 		priceCh := make(chan model.Price, 100)
 
-		readCtx := context.Background()
-		client.StartReading(readCtx, priceCh)
+		// Старт чтения
+		client.StartReading(ctx, priceCh) // важно: передаём ctx
 
-		for price := range priceCh {
+	READ_LOOP:
+		for {
 			select {
-			case output <- price:
-			case <-readCtx.Done():
-				log.Printf("Контекст чтения отменен для %s", address)
-				break
+			case price, ok := <-priceCh:
+				if !ok {
+					break READ_LOOP
+				}
+				select {
+				case output <- price:
+				case <-ctx.Done():
+					break READ_LOOP
+				}
+			case <-ctx.Done():
+				break READ_LOOP
 			}
 		}
 

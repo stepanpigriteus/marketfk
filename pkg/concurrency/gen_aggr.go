@@ -1,6 +1,7 @@
 package concurrency
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"marketfuck/internal/adapter/in/exchange/live"
@@ -10,7 +11,7 @@ import (
 	"sync/atomic"
 )
 
-func GenAggr(counter *atomic.Uint64, redis redis.RedisCache) <-chan model.Price {
+func GenAggr(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache) <-chan model.Price {
 	ports := []string{"40101", "40102", "40103"}
 
 	var wg sync.WaitGroup
@@ -59,7 +60,7 @@ func GenAggr(counter *atomic.Uint64, redis redis.RedisCache) <-chan model.Price 
 	for i, port := range ports {
 		exchangeWg.Add(1)
 		go func(i int, port string) {
-			live.GenConnectAndRead(port, &exchangeWg, priceChannels[i])
+			live.GenConnectAndRead(ctx, port, &exchangeWg, priceChannels[i])
 		}(i, port)
 	}
 

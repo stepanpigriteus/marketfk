@@ -84,16 +84,12 @@ func GetAllPrices(cache out.CacheClient, delay int64) ([]model.AggregatedPrice, 
 				continue
 			}
 
-			// Проверяем, попадает ли ключ в диапазон времени
 			if timestampMillis >= from && timestampMillis <= to {
-				// Получаем значение по ключу
 				value, err := cache.Get(ctx, key)
 				if err != nil {
 					log.Printf("Ошибка получения значения для ключа %s: %v", key, err)
 					continue
 				}
-
-				// Добавляем найденный ключ и его значение в результат
 				recentKeys = append(recentKeys, fmt.Sprintf("%s: %s", key, value))
 			}
 		}
@@ -101,7 +97,6 @@ func GetAllPrices(cache out.CacheClient, delay int64) ([]model.AggregatedPrice, 
 		cursor = newCursor
 		iteration++
 
-		// Завершаем сканирование, если курсор вернулся к нулю
 		if cursor == 0 {
 			log.Printf("Сканирование завершено (cursor = 0)")
 			break

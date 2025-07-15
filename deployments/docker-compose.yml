@@ -84,6 +84,7 @@ services:
       - marketfuck-net
 
   marketflow:
+    stop_grace_period: 30s
     build:
       context: ..
       dockerfile: deployments/Dockerfile
