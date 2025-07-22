@@ -27,13 +27,13 @@ func main() {
 	cfg := config.LoadConfig()
 
 	go func() {
-		testgen.StartFakeExchangeWithCtx(ctx, "50101", "exchangeTest1")
+		testgen.StartFakeExchangeWithCtx(ctx, "50201", "exchangeT1")
 	}()
 	go func() {
-		testgen.StartFakeExchangeWithCtx(ctx, "50102", "exchangeTest2")
+		testgen.StartFakeExchangeWithCtx(ctx, "50202", "exchangeT2")
 	}()
 	go func() {
-		testgen.StartFakeExchangeWithCtx(ctx, "50103", "exchangeTest3")
+		testgen.StartFakeExchangeWithCtx(ctx, "50203", "exchangeT3")
 	}()
 	time.Sleep(2 * time.Second)
 	sigCh := runner.SetupSignalHandler()
@@ -42,8 +42,8 @@ func main() {
 	defer db.Close()
 	defer redisClient.Close()
 
-	aggregator := func(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string) <-chan model.Price {
-		return concurrency.GenAggr(ctx, counter, redis, ports)
+	aggregator := func(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string, host string) <-chan model.Price {
+		return concurrency.GenAggr(ctx, counter, redis, ports, host)
 	}
 
 	modeService := service.NewModeService(redisClient, &counter, aggregator)

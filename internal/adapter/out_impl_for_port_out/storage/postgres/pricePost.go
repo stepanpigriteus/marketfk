@@ -17,7 +17,6 @@ func NewPriceRepository(db *sql.DB) *PriceRepository {
 	return &PriceRepository{db: db}
 }
 
-// написать нормальную функцию вставки данных!!!
 func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.AggregatedPrice) error {
 	if len(prices) == 0 {
 		return nil
@@ -28,6 +27,7 @@ func (r *PriceRepository) SavePrice(ctx context.Context, prices []model.Aggregat
 	var valueStrings []string
 
 	for i, p := range prices {
+
 		base := i * 6
 		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)",
 			base+1, base+2, base+3, base+4, base+5, base+6,

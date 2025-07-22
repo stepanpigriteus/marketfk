@@ -2,6 +2,7 @@ package live
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"marketfuck/internal/adapter/out_impl_for_port_out/exchange/live"
 	"marketfuck/internal/domain/model"
@@ -9,11 +10,19 @@ import (
 	"time"
 )
 
-func GenConnectAndRead(ctx context.Context, port string, wg *sync.WaitGroup, output chan<- model.Price) {
+func GenConnectAndRead(ctx context.Context, host string, port string, wg *sync.WaitGroup, output chan<- model.Price) {
 	defer wg.Done()
+	var address string
+	exchange := model.Exchange{}
+	if host == "" {
+		address = "127.0.0.1:" + port
+		exchange = model.Exchange{Name: "ExchangeT" + port[4:5]}
+	} else {
+		address = host + port[4:5] + ":" + port
+		exchange = model.Exchange{Name: "Exchange" + port[4:5]}
+	}
 
-	address := "exchange" + port[4:5] + ":" + port
-	exchange := model.Exchange{Name: "Exchange" + port[4:5]}
+	fmt.Println(address)
 
 	const maxRetries = 5
 	const maxBackoff = 16 * time.Second

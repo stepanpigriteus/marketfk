@@ -49,46 +49,56 @@ func GeneratePrice(exchangeName string) model.Price {
 }
 
 func StartFakeExchangeWithCtx(ctx context.Context, port string, exchangeName string) error {
-	addr := fmt.Sprintf("marketfuck:%s", port) // Используем имя сервиса в Docker-сети
-	for attempt := 1; attempt <= 5; attempt++ {
-		conn, err := net.Dial("tcp", addr)
-		if err == nil {
-			log.Printf("Фейковая биржа %s подключилась к порту %s", exchangeName, port)
-			go handleConnection(ctx, conn, exchangeName)
-			<-ctx.Done()
-			log.Printf("Фейковая биржа %s остановлена", exchangeName)
-			return ctx.Err()
-		}
-		log.Printf("Ошибка подключения фейковой биржи %s к порту %s (попытка %d/5): %v", exchangeName, port, attempt, err)
-		select {
-		case <-ctx.Done():
-			log.Printf("Фейковая биржа %s остановлена по сигналу контекста", exchangeName)
-			return ctx.Err()
-		case <-time.After(time.Duration(1<<attempt) * time.Second):
-			continue
-		}
+	addr := "127.0.0.1:" + port
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("не удалось запустить сервер на порту %s: %w", port, err)
 	}
-	return fmt.Errorf("не удалось подключиться к порту %s после 5 попыток", port)
+	log.Printf("[%s] слушает на %s", exchangeName, addr)
+
+	go func() {
+		<-ctx.Done()
+		log.Printf("[%s] остановка сервера на порту %s", exchangeName, port)
+		_ = listener.Close()
+	}()
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				return nil // корректное завершение
+			default:
+				log.Printf("[%s] ошибка соединения: %v", exchangeName, err)
+				continue
+			}
+		}
+		go handleExchangeConnection(ctx, conn, exchangeName)
+	}
 }
 
-func handleConnection(ctx context.Context, conn net.Conn, exchangeName string) {
+func handleExchangeConnection(ctx context.Context, conn net.Conn, exchangeName string) {
 	defer conn.Close()
 	encoder := json.NewEncoder(conn)
-	log.Printf("New connection established for %s", exchangeName)
-
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Connection closed for %s due to context cancellation", exchangeName)
+			log.Printf("[%s] завершение соединения", exchangeName)
 			return
 		case <-ticker.C:
 			price := GeneratePrice(exchangeName)
-			log.Printf("Sending price from %s: %+v", exchangeName, price)
+			conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			if err := encoder.Encode(price); err != nil {
-				log.Printf("Ошибка отправки данных с %s: %v", exchangeName, err)
+				log.Printf("[%s] ошибка отправки данных: %v", exchangeName, err)
+				return
+			}
+
+			if err := encoder.Encode(price); err != nil {
+				log.Printf("[%s] ошибка отправки данных: %v", exchangeName, err)
 				return
 			}
 		}

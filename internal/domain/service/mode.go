@@ -27,12 +27,13 @@ type ModeServiceImpl struct {
 	redis         *redis.RedisCache
 	counter       *atomic.Uint64
 	outputChan    <-chan model.Price
-	aggregatorFn  func(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string) <-chan model.Price
+	aggregatorFn  func(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string, host string) <-chan model.Price
 	fakeExchanges map[string]context.CancelFunc
+	isInitialized bool // Новый флаг
 }
 
 // Конструктор
-func NewModeService(redis *redis.RedisCache, counter *atomic.Uint64, aggregatorFn func(context.Context, *atomic.Uint64, redis.RedisCache, []string) <-chan model.Price) *ModeServiceImpl {
+func NewModeService(redis *redis.RedisCache, counter *atomic.Uint64, aggregatorFn func(context.Context, *atomic.Uint64, redis.RedisCache, []string, string) <-chan model.Price) *ModeServiceImpl {
 	return &ModeServiceImpl{
 		redis:         redis,
 		counter:       counter,
@@ -43,17 +44,22 @@ func NewModeService(redis *redis.RedisCache, counter *atomic.Uint64, aggregatorF
 }
 
 func (m *ModeServiceImpl) SwitchToTestMode(ctx context.Context) error {
-	return m.switchMode(ctx, TestMode, []string{"50201", "50202", "50203"})
+	return m.switchMode(ctx, TestMode, []string{"50201", "50202", "50203"}, "")
 }
 
 func (m *ModeServiceImpl) SwitchToLiveMode(ctx context.Context) error {
-	return m.switchMode(ctx, LiveMode, []string{"40101", "40102", "40103"})
+	return m.switchMode(ctx, LiveMode, []string{"40101", "40102", "40103"}, "exchange")
 }
 
-func (m *ModeServiceImpl) switchMode(ctx context.Context, newMode Mode, ports []string) error {
+func (m *ModeServiceImpl) switchMode(ctx context.Context, newMode Mode, ports []string, host string) error {
 	log.Println("switchMode() called with mode:", newMode)
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if m.currentMode == newMode {
+		log.Printf("Режим %v уже активен, пропускаем переключение", newMode)
+		return nil
+	}
 
 	// Остановка предыдущей агрегации, даже если режим тот же
 	if m.cancelFunc != nil {
@@ -78,7 +84,7 @@ func (m *ModeServiceImpl) switchMode(ctx context.Context, newMode Mode, ports []
 
 	// Запуск агрегации
 	log.Println("Starting aggregatorFn with ports:", ports)
-	m.outputChan = m.aggregatorFn(newCtx, m.counter, *m.redis, ports)
+	m.outputChan = m.aggregatorFn(newCtx, m.counter, *m.redis, ports, host)
 	if m.outputChan == nil {
 		log.Println("! aggregatorFn вернул nil канал")
 		return errors.New("aggregatorFn returned nil")

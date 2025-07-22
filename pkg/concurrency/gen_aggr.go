@@ -11,9 +11,7 @@ import (
 	"sync/atomic"
 )
 
-func GenAggr(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string) <-chan model.Price {
-
-
+func GenAggr(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string, host string) <-chan model.Price {
 	var wg sync.WaitGroup
 	var exchangeWg sync.WaitGroup
 	priceCh1 := make(chan model.Price, 500)
@@ -60,7 +58,7 @@ func GenAggr(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache
 	for i, port := range ports {
 		exchangeWg.Add(1)
 		go func(i int, port string) {
-			live.GenConnectAndRead(ctx, port, &exchangeWg, priceChannels[i])
+			live.GenConnectAndRead(ctx, host, port, &exchangeWg, priceChannels[i])
 		}(i, port)
 	}
 

@@ -23,7 +23,7 @@ services:
     networks:
       - marketfuck-net
 
-
+  
   exchange1:
     image: exchange1:latest
     container_name: exchange1
