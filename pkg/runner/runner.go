@@ -52,7 +52,7 @@ func InitDependencies(cfg *config.Config, logger port.Logger) (*sql.DB, *redis.R
 }
 
 func RunPriceSaver(ctx context.Context, redisClient *redis.RedisCache, marketService *service.MarketService, logger port.Logger) {
-	var delay int64 = 10
+	var delay int64 = 60
 	ticker := time.NewTicker(time.Duration(delay) * time.Second)
 	defer ticker.Stop()
 	var defRedisData []model.AggregatedPrice
