@@ -28,5 +28,6 @@ docker-compose up -d
 РУЧКИ
 - дописать валидацию exchange name до Exchange1
 http://localhost:8081/prices/latest/SOLUSDT
+curl http://localhost:8081/health
 
 redis-cli KEYS *:Exchange*:*

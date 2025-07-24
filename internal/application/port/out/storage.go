@@ -49,3 +49,5 @@ type ModeRepository interface {
 type HealthRepository interface {
 	CheckConnection(ctx context.Context) (bool, error)
 }
+
+

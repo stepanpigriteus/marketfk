@@ -5,6 +5,7 @@ import (
 	"marketfuck/cmd/testgen"
 	"marketfuck/internal/adapter/in/http"
 	"marketfuck/internal/adapter/out_impl_for_port_out/cache/redis"
+	usecase "marketfuck/internal/application/usecase_impl_for_port_in"
 	"marketfuck/internal/domain/model"
 	"marketfuck/internal/domain/service"
 	"marketfuck/pkg/concurrency"
@@ -42,6 +43,17 @@ func main() {
 	defer db.Close()
 	defer redisClient.Close()
 
+	exchanges := []usecase.ExchangeConfig{
+		{Name: "exchangeT1", Host: "localhost", Port: "50201"},
+		{Name: "exchangeT2", Host: "localhost", Port: "50202"},
+		{Name: "exchangeT3", Host: "localhost", Port: "50203"},
+		{Name: "exchange1", Host: "localhost", Port: "40201"},
+		{Name: "exchange2", Host: "localhost", Port: "40202"},
+		{Name: "exchange3", Host: "localhost", Port: "40203"},
+	}
+
+	healthService := usecase.NewHealthService(redisClient, db, exchanges)
+
 	aggregator := func(ctx context.Context, counter *atomic.Uint64, redis redis.RedisCache, ports []string, host string) <-chan model.Price {
 		return concurrency.GenAggr(ctx, counter, redis, ports, host)
 	}
@@ -55,7 +67,7 @@ func main() {
 	}
 	logger.Info("Successfully switched to LiveMode")
 
-	server := http.NewServer("8081", db, logger, redisClient, modeService)
+	server := http.NewServer("8081", db, logger, redisClient, modeService, healthService)
 
 	wg := &sync.WaitGroup{}
 

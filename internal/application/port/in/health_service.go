@@ -12,5 +12,3 @@ type SystemHealth struct {
 	RedisActive    bool              `json:"redis_active"`
 	PostgresActive bool              `json:"postgres_active"`
 }
-
-

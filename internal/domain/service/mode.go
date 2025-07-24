@@ -56,10 +56,10 @@ func (m *ModeServiceImpl) switchMode(ctx context.Context, newMode Mode, ports []
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.currentMode == newMode {
-		log.Printf("Режим %v уже активен, пропускаем переключение", newMode)
-		return nil
-	}
+	// if m.currentMode == newMode {
+	// 	log.Printf("Режим %v уже активен, пропускаем переключение", newMode)
+	// 	return nil
+	// }
 
 	// Остановка предыдущей агрегации, даже если режим тот же
 	if m.cancelFunc != nil {

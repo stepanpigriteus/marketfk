@@ -20,11 +20,11 @@ type Config struct {
 		Host         string        `env:"REDIS_HOST"`
 		Port         int           `env:"REDIS_PORT"`
 		Password     string        `env:"REDIS_PASSWORD"`
-		DB           int           `env:"REDIS_DB"` // Номер базы данных (по умолчанию 0)
+		DB           int           `env:"REDIS_DB"`
 		DialTimeout  time.Duration `env:"REDIS_DIAL_TIMEOUT"`
 		ReadTimeout  time.Duration `env:"REDIS_READ_TIMEOUT"`
 		WriteTimeout time.Duration `env:"REDIS_WRITE_TIMEOUT"`
-		PoolSize     int           `env:"REDIS_POOL_SIZE"` // Количество соединений в пуле
+		PoolSize     int           `env:"REDIS_POOL_SIZE"`
 		TLS          bool          `env:"REDIS_TLS"`
 	}
 }
@@ -101,4 +101,3 @@ func mustParseDuration(key string, defaultVal time.Duration) time.Duration {
 	}
 	return val
 }
-

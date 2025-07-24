@@ -46,7 +46,6 @@ func (h *PriceHandler) HandleGetLatestPrice(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(aggregatedPrice)
 }
 
-// обрабатывает запрос на получение последней цены с конкретной биржи
 func (h *PriceHandler) HandleGetLatestPriceByExchange(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(">>> GetLatestPriceByExange handler called")
 	ctx := r.Context()
